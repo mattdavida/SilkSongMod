@@ -92,10 +92,16 @@ namespace SilkSong
                 {
                     try
                     {
-                        Universe.Init();
-                        uiBase = UniversalUI.RegisterUI("SilkSongCheatGUI", null);
-                        universeLibInitialized = true;
-                        MelonLogger.Msg("UniverseLib initialized successfully!");
+                        // Configure UniverseLib with proper settings for UI
+                        var config = new UniverseLib.Config.UniverseLibConfig()
+                        {
+                            Disable_EventSystem_Override = false,
+                            Force_Unlock_Mouse = true
+                        };
+                        
+                        float startupDelay = 1f;
+                        Universe.Init(startupDelay, OnUniverseLibInitialized, LogHandler, config);
+                        MelonLogger.Msg("UniverseLib initialization started...");
                     }
                     catch (Exception e)
                     {
@@ -251,6 +257,26 @@ namespace SilkSong
         {
             lastToastMessage = message;
             toastTimer = TOAST_DURATION;
+        }
+
+        private void OnUniverseLibInitialized()
+        {
+            try
+            {
+                uiBase = UniversalUI.RegisterUI("SilkSongCheatGUI", null);
+                universeLibInitialized = true;
+                MelonLogger.Msg("UniverseLib initialized successfully!");
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Failed to register UI with UniverseLib: {e.Message}");
+            }
+        }
+
+        private void LogHandler(string message, UnityEngine.LogType type)
+        {
+            // Forward UniverseLib logs to MelonLoader
+            MelonLogger.Msg($"[UniverseLib] {message}");
         }
         
         private void ScanDamageFields()
