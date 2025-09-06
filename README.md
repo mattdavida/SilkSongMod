@@ -1,5 +1,7 @@
 # Hollow Knight: Silksong - Simple Cheats
 
+![Hollow Knight Silksong Cheat Mod](https://github.com/user-attachments/assets/d63a2937-30d2-4c1a-b0f8-357b30744b7b)
+
 Professional cheat with GUI interface, customizable keybinds, and balance system.
 
 ## ✨ Key Features
