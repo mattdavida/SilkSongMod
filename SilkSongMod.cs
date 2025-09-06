@@ -48,6 +48,10 @@ namespace SilkSong
         private bool fieldsScanned = false;
         private bool showDetails = false;
         
+        // One Hit Kill toggle system
+        private bool oneHitKillEnabled = false;
+        private Dictionary<string, object> oneHitKillOriginalValues = new Dictionary<string, object>();
+        
         // Input field variables
         private string healthAmount = "1";
         private string moneyAmount = "1000";
@@ -62,7 +66,7 @@ namespace SilkSong
         };
         private string[] keybindNames = new string[]
         {
-            "Add Health", "Set Health", "Refill Health", "One Hit Kill", "Add Money",
+            "Add Health", "Set Health", "Refill Health", "Toggle One Hit Kill", "Add Money",
             "Add Shards", "Unlock Crests", "Unlock Tools", "Unlock Items", "Max Collectables", "Auto Silk"
         };
         private bool isSettingKeybind = false;
@@ -72,7 +76,7 @@ namespace SilkSong
         public override void OnApplicationStart()
         {
             MelonLogger.Msg("Silksong Health Mod v1.0 - Ready!");
-            MelonLogger.Msg("Controls: F1=Add Health, F2=Set Health to 11, F3=Refill Health, F4=One Hit Kill Mode, F5=Add 1000 Money, F6=Add 1000 Shards, F8=Unlock All Crests, F9=Unlock All Tools, F10=Unlock All Items, F11=Max All Collectables, F12=Toggle Auto Silk Refill, INSERT/TILDE=Toggle GUI");
+            MelonLogger.Msg("Controls: F1=Add Health, F2=Set Health to 11, F3=Refill Health, F4=Toggle One Hit Kill Mode, F5=Add 1000 Money, F6=Add 1000 Shards, F8=Unlock All Crests, F9=Unlock All Tools, F10=Unlock All Items, F11=Max All Collectables, F12=Toggle Auto Silk Refill, INSERT/TILDE=Toggle GUI");
         }
 
         public override void OnInitializeMelon()
@@ -473,6 +477,13 @@ namespace SilkSong
                 ToggleAutoSilkRefill();
                 ShowToast($"Auto Silk Refill: {(autoRefillSilk ? "Enabled" : "Disabled")}");
             }
+            
+            bool newOneHitKill = GUILayout.Toggle(oneHitKillEnabled, "One Hit Kill Mode");
+            if (newOneHitKill != oneHitKillEnabled)
+            {
+                EnableOneHitKill();
+                ShowToast($"One Hit Kill: {(oneHitKillEnabled ? "Enabled" : "Disabled")}");
+            }
 
             GUILayout.Space(10);
 
@@ -544,11 +555,14 @@ namespace SilkSong
                 RefillHealth();
                 ShowToast("Health refilled to max!");
             }
-            if (GUILayout.Button("One Hit Kill"))
+            string ohkButtonText = oneHitKillEnabled ? "Disable One Hit Kill" : "Enable One Hit Kill";
+            GUI.color = oneHitKillEnabled ? Color.green : Color.white;
+            if (GUILayout.Button(ohkButtonText))
             {
                 EnableOneHitKill();
-                ShowToast("One Hit Kill enabled!");
+                ShowToast($"One Hit Kill {(oneHitKillEnabled ? "enabled" : "disabled")}!");
             }
+            GUI.color = Color.white;
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
@@ -1564,27 +1578,101 @@ namespace SilkSong
         {
             try
             {
-                MelonLogger.Msg("=== F4: TARGETING ENEMY DAMAGE ONLY ===");
-                
-                int modifiedCount = 0;
+                if (oneHitKillEnabled)
+                {
+                    // Disable one hit kill - restore original values
+                    DisableOneHitKill();
+                }
+                else
+                {
+                    // Enable one hit kill - save originals and set high values
+                    MelonLogger.Msg("=== ENABLING ONE HIT KILL MODE ===");
+                    
+                    int modifiedCount = 0;
+                    oneHitKillOriginalValues.Clear(); // Clear any previous values
 
-                // Search for DamageEnemies components only
+                    // Search for DamageEnemies components only
+                    MonoBehaviour[] allBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+
+                    foreach (MonoBehaviour behaviour in allBehaviours)
+                    {
+                        if (behaviour == null) continue;
+
+                        Type type = behaviour.GetType();
+                        string typeName = type.Name.ToLower();
+
+                        // Only target DamageEnemies components
+                        if (typeName.Contains("damageenemies"))
+                        {
+                            FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                            
+                            foreach (FieldInfo field in fields)
+                            {
+                                string fieldName = field.Name.ToLower();
+                                
+                                // Look for damage-related fields
+                                if ((fieldName.Contains("damage") || fieldName.Contains("multiplier")) 
+                                    && (field.FieldType == typeof(float) || field.FieldType == typeof(int)))
+                                {
+                                    try
+                                    {
+                                        // Create unique key for this field instance
+                                        string key = $"{behaviour.GetInstanceID()}_{type.Name}_{field.Name}";
+                                        
+                                        // Save original value
+                                        object originalValue = field.GetValue(behaviour);
+                                        oneHitKillOriginalValues[key] = originalValue;
+                                        
+                                        // Set high damage value
+                                        if (field.FieldType == typeof(float))
+                                        {
+                                            field.SetValue(behaviour, 100.0f);
+                                            MelonLogger.Msg($"Set {type.Name}.{field.Name} = 100.0f (was {originalValue})");
+                                            modifiedCount++;
+                                        }
+                                        else if (field.FieldType == typeof(int))
+                                        {
+                                            field.SetValue(behaviour, 100);
+                                            MelonLogger.Msg($"Set {type.Name}.{field.Name} = 100 (was {originalValue})");
+                                            modifiedCount++;
+                                        }
+                                    }
+                                    catch (Exception)
+                                    {
+                                        // Ignore read-only or protected fields
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    oneHitKillEnabled = true;
+                    MelonLogger.Msg($"One Hit Kill ENABLED: Modified {modifiedCount} DamageEnemies values");
+                }
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error toggling one hit kill: {e.Message}");
+            }
+        }
+
+        private void DisableOneHitKill()
+        {
+            try
+            {
+                MelonLogger.Msg("=== DISABLING ONE HIT KILL MODE ===");
+                
+                int restoredCount = 0;
+
+                // Search for DamageEnemies components to restore values
                 MonoBehaviour[] allBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
 
-                
                 foreach (MonoBehaviour behaviour in allBehaviours)
                 {
                     if (behaviour == null) continue;
 
                     Type type = behaviour.GetType();
                     string typeName = type.Name.ToLower();
-
-                    if (typeName.Contains("tool")) {
-                         MelonLogger.Msg($"TypeName: {typeName}");   
-
-                    }
-
-
 
                     // Only target DamageEnemies components
                     if (typeName.Contains("damageenemies"))
@@ -1601,17 +1689,16 @@ namespace SilkSong
                             {
                                 try
                                 {
-                                    if (field.FieldType == typeof(float))
+                                    // Create unique key for this field instance
+                                    string key = $"{behaviour.GetInstanceID()}_{type.Name}_{field.Name}";
+                                    
+                                    // Restore original value if we have it
+                                    if (oneHitKillOriginalValues.ContainsKey(key))
                                     {
-                                        field.SetValue(behaviour, 100.0f);
-                                        MelonLogger.Msg($"Set {type.Name}.{field.Name} = 100.0f");
-                                        modifiedCount++;
-                                    }
-                                    else if (field.FieldType == typeof(int))
-                                    {
-                                        field.SetValue(behaviour, 100);
-                                        MelonLogger.Msg($"Set {type.Name}.{field.Name} = 100");
-                                        modifiedCount++;
+                                        object originalValue = oneHitKillOriginalValues[key];
+                                        field.SetValue(behaviour, originalValue);
+                                        MelonLogger.Msg($"Restored {type.Name}.{field.Name} = {originalValue}");
+                                        restoredCount++;
                                     }
                                 }
                                 catch (Exception)
@@ -1623,11 +1710,13 @@ namespace SilkSong
                     }
                 }
 
-                MelonLogger.Msg($"Enemy Damage Boost: Modified {modifiedCount} DamageEnemies values only");
+                oneHitKillEnabled = false;
+                oneHitKillOriginalValues.Clear(); // Clear stored values
+                MelonLogger.Msg($"One Hit Kill DISABLED: Restored {restoredCount} DamageEnemies values");
             }
             catch (Exception e)
             {
-                MelonLogger.Msg($"Error targeting enemy damage: {e.Message}");
+                MelonLogger.Msg($"Error disabling one hit kill: {e.Message}");
             }
         }
 
