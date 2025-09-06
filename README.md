@@ -22,7 +22,8 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | Feature | Function | Customizable |
 |---------|----------|--------------|
 | **Health System** | Add/remove health with custom amounts | ✅ Input field |
-| **Max Health** | Increase/decrease maximum health | ✅ Input field |
+| **Max Health** | Add/Set exact max health (1-9999) + auto-refill | ✅ Input fields |
+| **Fast Travel** | Unlock all 10 fast travel locations instantly | ✅ One-click |
 | **Currency** | Add money and shards | ✅ Input fields |
 | **Auto Silk Refill** | Automatic silk restoration every 2 seconds | ✅ Toggle |
 | **Unlock Systems** | Crests, tools, items, collectables | ✅ One-click |
@@ -39,7 +40,7 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | Key | Default Function | Notes |
 |-----|------------------|-------|
 | **F1** | Add Health | Custom amount via GUI |
-| **F2** | Add Max Health | Custom amount via GUI |
+| **F2** | Set Health | Set exact max health + refill |
 | **F3** | Refill Health | Instant full restore |
 | **F4** | One Hit Kill | Toggle massive damage |
 | **F5** | Add Money | Custom amount via GUI |
@@ -97,7 +98,7 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 ## 📝 Notes
 
 - ✅ **Compatibility**: Works with any save file, new or existing
-- 🎯 **Health System**: Supports values beyond UI display limit (saves properly)
+- 🎯 **Health System**: Add/Set modes with validation (1-9999), auto-refill, save/reload for UI update
 - ⚖️ **Balance System**: Modifies DamageEnemies components proportionally  
 - 🔧 **No Config Files**: Everything managed through intuitive GUI
 - 💾 **Persistent Settings**: Keybind changes remembered between sessions

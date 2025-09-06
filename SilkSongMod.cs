@@ -21,6 +21,7 @@ namespace SilkSong
 
         // GUI Variables
         private bool showGUI = false;
+       
         private Rect windowRect = new Rect(Screen.width - 420, 20, 400, (Screen.height * 0.8f));
         private UIBase uiBase;
         private bool universeLibInitialized = false;
@@ -51,7 +52,7 @@ namespace SilkSong
         private string healthAmount = "1";
         private string moneyAmount = "1000";
         private string shardAmount = "1000";
-        private string maxHealthAmount = "6";
+        private string setHealthAmount = "11"; // For setting exact health
         
         // Keybind variables
         private KeyCode[] currentKeybinds = new KeyCode[] 
@@ -61,7 +62,7 @@ namespace SilkSong
         };
         private string[] keybindNames = new string[]
         {
-            "Add Health", "Max Health", "Refill Health", "One Hit Kill", "Add Money",
+            "Add Health", "Set Health", "Refill Health", "One Hit Kill", "Add Money",
             "Add Shards", "Unlock Crests", "Unlock Tools", "Unlock Items", "Max Collectables", "Auto Silk"
         };
         private bool isSettingKeybind = false;
@@ -71,7 +72,7 @@ namespace SilkSong
         public override void OnApplicationStart()
         {
             MelonLogger.Msg("Silksong Health Mod v1.0 - Ready!");
-            MelonLogger.Msg("Controls: F1=Add Health, F2=Max Out Mask Shards, F3=Refill Health, F4=One Hit Kill Mode, F5=Add 1000 Money, F6=Add 1000 Shards, F8=Unlock All Crests, F9=Unlock All Tools, F10=Unlock All Items, F11=Max All Collectables, F12=Toggle Auto Silk Refill, INSERT/TILDE=Toggle GUI");
+            MelonLogger.Msg("Controls: F1=Add Health, F2=Set Health to 11, F3=Refill Health, F4=One Hit Kill Mode, F5=Add 1000 Money, F6=Add 1000 Shards, F8=Unlock All Crests, F9=Unlock All Tools, F10=Unlock All Items, F11=Max All Collectables, F12=Toggle Auto Silk Refill, INSERT/TILDE=Toggle GUI");
         }
 
         public override void OnInitializeMelon()
@@ -181,10 +182,10 @@ namespace SilkSong
                         AddHealth(health);
                 }
 
-                if (Input.GetKeyDown(currentKeybinds[1])) // Max Health
+                if (Input.GetKeyDown(currentKeybinds[1])) // Set Health
                 {
-                    if (int.TryParse(maxHealthAmount, out int maxHealth))
-                        AddMaxHealth(maxHealth);
+                    if (int.TryParse(setHealthAmount, out int targetHealth))
+                        SetMaxHealthExact(targetHealth);
                 }
 
                 if (Input.GetKeyDown(currentKeybinds[2])) // Refill Health
@@ -287,7 +288,7 @@ namespace SilkSong
             damageBehaviours.Clear();
             originalValues.Clear();
             
-            MonoBehaviour[] allBehaviours = UnityEngine.Object.FindObjectsOfType<MonoBehaviour>();
+            MonoBehaviour[] allBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
             
             foreach (MonoBehaviour behaviour in allBehaviours)
             {
@@ -491,18 +492,20 @@ namespace SilkSong
             }
             GUILayout.EndHorizontal();
 
+            // Set Health input and button
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Max Health:", GUILayout.Width(80));
-            maxHealthAmount = GUILayout.TextField(maxHealthAmount, GUILayout.Width(60));
-            if (GUILayout.Button("Add", GUILayout.Width(50)))
+            GUILayout.Label("Set Health:", GUILayout.Width(80));
+            setHealthAmount = GUILayout.TextField(setHealthAmount, GUILayout.Width(60));
+            if (GUILayout.Button("Set", GUILayout.Width(50)))
             {
-                if (int.TryParse(maxHealthAmount, out int maxHealth))
+                if (int.TryParse(setHealthAmount, out int targetHealth))
                 {
-                    AddMaxHealth(maxHealth);
-                    ShowToast($"Added {maxHealth} max health!");
+                    SetMaxHealthExact(targetHealth);
+                    ShowToast($"Set max health to {targetHealth} - Save & reload to see UI!");
                 }
             }
             GUILayout.EndHorizontal();
+
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("Money:", GUILayout.Width(80));
@@ -571,6 +574,14 @@ namespace SilkSong
             {
                 MaxAllCollectables();
                 ShowToast("All collectables maxed!");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Unlock All Fast Travel Locations"))
+            {
+                UnlockAllFastTravel();
+                ShowToast("All fast travel unlocked!");
             }
             GUILayout.EndHorizontal();
 
@@ -718,6 +729,274 @@ namespace SilkSong
 
             GUILayout.EndScrollView();
         }
+
+
+
+
+        private Type FindTypeInAssemblies(string typeName)
+        {
+            try
+            {
+                // Search Assembly-CSharp first
+                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (assembly.GetName().Name == "Assembly-CSharp")
+                    {
+                        Type foundType = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
+                        if (foundType != null) return foundType;
+                    }
+                }
+
+                // Search all other assemblies
+                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    try
+                    {
+                        Type foundType = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
+                        if (foundType != null) return foundType;
+                    }
+                    catch (Exception)
+                    {
+                        // Skip assemblies that can't be searched
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Msg($"Error in FindTypeInAssemblies: {ex.Message}");
+                return null;
+            }
+        }
+
+        private Canvas GetUIManagerCanvas()
+        {
+            try
+            {
+                // Find UIManager
+                Type uiManagerType = FindTypeInAssemblies("UIManager");
+                if (uiManagerType == null) return null;
+
+                PropertyInfo instanceProperty = uiManagerType.GetProperty("instance", BindingFlags.Public | BindingFlags.Static);
+                object uiManagerInstance = instanceProperty?.GetValue(null);
+                if (uiManagerInstance == null) return null;
+
+                // Get UICanvas field
+                FieldInfo canvasField = uiManagerType.GetField("UICanvas", BindingFlags.Public | BindingFlags.Instance);
+                Canvas uiCanvas = canvasField?.GetValue(uiManagerInstance) as Canvas;
+                
+                if (uiCanvas != null)
+                {
+                    MelonLogger.Msg($"✓ Found UIManager Canvas: {uiCanvas.name}");
+                }
+
+                return uiCanvas;
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error getting UIManager Canvas: {e.Message}");
+                return null;
+            }
+        }
+
+        private GameObject CreateMenuGameObject(string name, Canvas parentCanvas)
+        {
+            try
+            {
+                // Create the main GameObject
+                GameObject menuGO = new GameObject(name);
+
+                // Add essential UI components like real menus have
+                RectTransform rectTransform = menuGO.AddComponent<RectTransform>();
+                CanvasRenderer canvasRenderer = menuGO.AddComponent<CanvasRenderer>();
+                CanvasGroup canvasGroup = menuGO.AddComponent<CanvasGroup>();
+
+                // Setup CanvasGroup properties (like real menus)
+                canvasGroup.alpha = 1f;
+                canvasGroup.interactable = true;
+                canvasGroup.blocksRaycasts = true;
+
+                // Parent to UI Canvas if available
+                if (parentCanvas != null)
+                {
+                    menuGO.transform.SetParent(parentCanvas.transform, false);
+                    menuGO.layer = parentCanvas.gameObject.layer; // Set to UI layer
+                    
+                    // Setup RectTransform like real menus (full screen)
+                    rectTransform.anchorMin = Vector2.zero;
+                    rectTransform.anchorMax = Vector2.one;
+                    rectTransform.offsetMin = Vector2.zero;
+                    rectTransform.offsetMax = Vector2.zero;
+                    
+                    MelonLogger.Msg($"✓ Created menu GameObject parented to {parentCanvas.name}");
+                }
+                else
+                {
+                    // Fallback: set layer manually
+                    menuGO.layer = LayerMask.NameToLayer("UI");
+                    MelonLogger.Msg("✓ Created standalone menu GameObject");
+                }
+
+                return menuGO;
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error creating menu GameObject: {e.Message}");
+                return new GameObject(name); // Fallback to basic GameObject
+            }
+        }
+
+        private void CreateMenuChildren(GameObject parentMenu)
+        {
+            try
+            {
+                MelonLogger.Msg("Creating menu children structure...");
+
+                // Create Title child (like ControllerMenuScreen has)
+                GameObject titleGO = new GameObject("Title");
+                titleGO.transform.SetParent(parentMenu.transform, false);
+                titleGO.AddComponent<RectTransform>();
+                
+                // Add TextMeshProUGUI for title
+                Type textMeshType = FindTypeInAssemblies("TextMeshProUGUI");
+                if (textMeshType != null)
+                {
+                    Component titleText = titleGO.AddComponent(textMeshType);
+                    PropertyInfo textProperty = textMeshType.GetProperty("text");
+                    textProperty?.SetValue(titleText, "DEBUG MENU");
+                    MelonLogger.Msg("✓ Created Title child with text");
+                }
+
+                // Create Content child (container for menu items)
+                GameObject contentGO = new GameObject("Content");
+                contentGO.transform.SetParent(parentMenu.transform, false);
+                RectTransform contentRect = contentGO.AddComponent<RectTransform>();
+                contentGO.AddComponent<CanvasRenderer>();
+                
+                // Position content below title
+                contentRect.anchorMin = new Vector2(0, 0);
+                contentRect.anchorMax = new Vector2(1, 0.8f);
+                contentRect.offsetMin = Vector2.zero;
+                contentRect.offsetMax = Vector2.zero;
+                
+                MelonLogger.Msg("✓ Created Content child container");
+
+                // Create Controls child (for button container)
+                GameObject controlsGO = new GameObject("Controls");
+                controlsGO.transform.SetParent(parentMenu.transform, false);
+                RectTransform controlsRect = controlsGO.AddComponent<RectTransform>();
+                controlsGO.AddComponent<CanvasRenderer>();
+
+                // Position controls at bottom
+                controlsRect.anchorMin = new Vector2(0, 0);
+                controlsRect.anchorMax = new Vector2(1, 0.2f);
+                controlsRect.offsetMin = Vector2.zero;
+                controlsRect.offsetMax = Vector2.zero;
+
+                MelonLogger.Msg("✓ Created Controls child container");
+
+                // Try to add MenuScreen component if it exists (like real menus)
+                Type menuScreenType = FindTypeInAssemblies("MenuScreen");
+                if (menuScreenType != null)
+                {
+                    parentMenu.AddComponent(menuScreenType);
+                    MelonLogger.Msg("✓ Added MenuScreen component");
+                }
+
+                MelonLogger.Msg($"✓ Created menu structure with {parentMenu.transform.childCount} children");
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error creating menu children: {e.Message}");
+            }
+        }
+
+
+
+        private void AnalyzeExistingMenus()
+        {
+            try
+            {
+                MelonLogger.Msg("=== ANALYZING EXISTING MENU STRUCTURES ===");
+
+                // Find all GameObjects with MenuScreen components
+                Type menuScreenType = FindTypeInAssemblies("MenuScreen");
+                if (menuScreenType != null)
+                {
+                    UnityEngine.Object[] menuScreens = Resources.FindObjectsOfTypeAll(menuScreenType);
+                    MelonLogger.Msg($"Found {menuScreens.Length} MenuScreen instances:");
+
+                    foreach (UnityEngine.Object screen in menuScreens)
+                    {
+                        if (screen != null)
+                        {
+                            Component comp = screen as Component;
+                            GameObject go = comp.gameObject;
+                            MelonLogger.Msg($"\n--- {go.name} ---");
+                            MelonLogger.Msg($"Active: {go.activeInHierarchy}");
+                            MelonLogger.Msg($"Layer: {LayerMask.LayerToName(go.layer)}");
+                            MelonLogger.Msg($"Components:");
+
+                            Component[] components = go.GetComponents<Component>();
+                            foreach (Component component in components)
+                            {
+                                MelonLogger.Msg($"  - {component.GetType().Name}");
+                            }
+
+                            MelonLogger.Msg($"Children ({go.transform.childCount}):");
+                            for (int i = 0; i < go.transform.childCount; i++)
+                            {
+                                Transform child = go.transform.GetChild(i);
+                                MelonLogger.Msg($"  [{i}] {child.name}");
+                                
+                                // Show child components too
+                                Component[] childComponents = child.GetComponents<Component>();
+                                foreach (Component childComp in childComponents)
+                                {
+                                    MelonLogger.Msg($"      - {childComp.GetType().Name}");
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Also analyze ControllerMenuScreen specifically since we saw it in inspector
+                GameObject[] allObjects = UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+                GameObject controllerMenu = null;
+                foreach (GameObject obj in allObjects)
+                {
+                    if (obj.name == "ControllerMenuScreen")
+                    {
+                        controllerMenu = obj;
+                        break;
+                    }
+                }
+
+                if (controllerMenu != null)
+                {
+                    MelonLogger.Msg("\n=== DETAILED ANALYSIS: ControllerMenuScreen ===");
+                    MelonLogger.Msg($"Parent: {(controllerMenu.transform.parent ? controllerMenu.transform.parent.name : "None")}");
+                    MelonLogger.Msg($"Layer: {LayerMask.LayerToName(controllerMenu.layer)}");
+                    MelonLogger.Msg($"Scale: {controllerMenu.transform.localScale}");
+                    
+                    RectTransform rect = controllerMenu.GetComponent<RectTransform>();
+                    if (rect != null)
+                    {
+                        MelonLogger.Msg($"RectTransform - AnchorMin: {rect.anchorMin}, AnchorMax: {rect.anchorMax}");
+                        MelonLogger.Msg($"OffsetMin: {rect.offsetMin}, OffsetMax: {rect.offsetMax}");
+                    }
+                }
+
+                ShowToast("Menu analysis completed - check console");
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error analyzing menus: {e.Message}");
+                MelonLogger.Msg($"Error analyzing existing menus: {e.Message}");
+            }
+        }
+
         
         private Dictionary<string, float> GetFieldOverview()
         {
@@ -776,7 +1055,7 @@ namespace SilkSong
         {
             // Restore original default keybinds
             currentKeybinds[0] = KeyCode.F1;   // Add Health
-            currentKeybinds[1] = KeyCode.F2;   // Max Health
+            currentKeybinds[1] = KeyCode.F2;   // Set Health
             currentKeybinds[2] = KeyCode.F3;   // Refill Health
             currentKeybinds[3] = KeyCode.F4;   // One Hit Kill
             currentKeybinds[4] = KeyCode.F5;   // Add Money
@@ -820,26 +1099,123 @@ namespace SilkSong
             }
         }
 
-        private void AddMaxHealth(int amount)
+
+        private void SetMaxHealthExact(int targetMaxHealth)
         {
             try
             {
-                Type type = heroController.GetType();
-                MethodInfo addMaxHealthMethod = type.GetMethod("AddToMaxHealth");
+                // Validate minimum health
+                if (targetMaxHealth < 1)
+                {
+                    ShowToast("Warning: Minimum health is 1!");
+                    MelonLogger.Msg("Attempted to set max health below 1 - setting to 1 instead");
+                    targetMaxHealth = 1;
+                }
+
+                // Validate maximum to prevent crashes (reasonable upper limit)
+                if (targetMaxHealth > 9999)
+                {
+                    ShowToast("Warning: Max health capped at 9999!");
+                    MelonLogger.Msg("Attempted to set max health above 9999 - capping at 9999");
+                    targetMaxHealth = 9999;
+                }
+
+                // Get current max health via playerData
+                Type heroType = heroController.GetType();
+                FieldInfo playerDataField = heroType.GetField("playerData", BindingFlags.Public | BindingFlags.Instance);
                 
+                if (playerDataField != null)
+                {
+                    object playerData = playerDataField.GetValue(heroController);
+                    Type playerDataType = playerData.GetType();
+                    
+                    // Get CurrentMaxHealth property
+                    PropertyInfo currentMaxHealthProp = playerDataType.GetProperty("CurrentMaxHealth");
+                    if (currentMaxHealthProp != null)
+                    {
+                        int currentMaxHealth = (int)currentMaxHealthProp.GetValue(playerData);
+                        int difference = targetMaxHealth - currentMaxHealth;
+                        
+                        MelonLogger.Msg($"Current max health: {currentMaxHealth}, Target: {targetMaxHealth}, Difference: {difference}");
+                        
+                        // Use AddToMaxHealth to reach the target
+                        MethodInfo addMaxHealthMethod = heroType.GetMethod("AddToMaxHealth");
                 if (addMaxHealthMethod != null)
                 {
-                    addMaxHealthMethod.Invoke(heroController, new object[] { amount });
-                    MelonLogger.Msg($"Added {amount} max health - Save to main menu and re-enter to see UI update");
+                            addMaxHealthMethod.Invoke(heroController, new object[] { difference });
+                            MelonLogger.Msg($"Set max health to {targetMaxHealth}");
+                            
+                            // Automatically refill health to new max
+                            RefillHealthAfterMaxChange();
+                            
+                            ShowToast($"Max health set to {targetMaxHealth} - Save & reload to see UI update!");
                 }
                 else
                 {
                     MelonLogger.Msg("AddToMaxHealth method not found");
+                        }
+                    }
+                    else
+                    {
+                        MelonLogger.Msg("CurrentMaxHealth property not found");
+                    }
+                }
+                else
+                {
+                    MelonLogger.Msg("playerData field not found");
                 }
             }
             catch (Exception e)
             {
-                MelonLogger.Msg($"Error adding max health: {e.Message}");
+                MelonLogger.Msg($"Error setting exact max health: {e.Message}");
+                ShowToast($"Error setting max health: {e.Message}");
+            }
+        }
+
+        private void RefillHealthAfterMaxChange()
+        {
+            try
+            {
+                // Get the current health and max health
+                Type heroType = heroController.GetType();
+                FieldInfo playerDataField = heroType.GetField("playerData", BindingFlags.Public | BindingFlags.Instance);
+                
+                if (playerDataField != null)
+                {
+                    object playerData = playerDataField.GetValue(heroController);
+                    Type playerDataType = playerData.GetType();
+                    
+                    PropertyInfo currentMaxHealthProp = playerDataType.GetProperty("CurrentMaxHealth");
+                    PropertyInfo healthProp = playerDataType.GetProperty("health");
+                    
+                    if (currentMaxHealthProp != null && healthProp != null)
+                    {
+                        int currentMaxHealth = (int)currentMaxHealthProp.GetValue(playerData);
+                        int currentHealth = (int)healthProp.GetValue(playerData);
+                        
+                        // Calculate how much health to add to reach max
+                        int healthToAdd = currentMaxHealth - currentHealth;
+                        
+                        if (healthToAdd > 0)
+                        {
+                            // Use the AddHealth method to properly refill
+                            MethodInfo addHealthMethod = heroType.GetMethod("AddHealth");
+                            if (addHealthMethod != null)
+                            {
+                                addHealthMethod.Invoke(heroController, new object[] { healthToAdd });
+                                MelonLogger.Msg($"Refilled {healthToAdd} health to reach new max of {currentMaxHealth}");
+                            }
+                        }
+                        else
+                        {
+                            MelonLogger.Msg("Health already at or above max");
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error refilling health after max change: {e.Message}");
             }
         }
 
@@ -1193,7 +1569,7 @@ namespace SilkSong
                 int modifiedCount = 0;
 
                 // Search for DamageEnemies components only
-                MonoBehaviour[] allBehaviours = UnityEngine.Object.FindObjectsOfType<MonoBehaviour>();
+                MonoBehaviour[] allBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
 
                 
                 foreach (MonoBehaviour behaviour in allBehaviours)
@@ -1238,7 +1614,7 @@ namespace SilkSong
                                         modifiedCount++;
                                     }
                                 }
-                                catch (Exception e)
+                                catch (Exception)
                                 {
                                     // Ignore read-only or protected fields
                                 }
@@ -1294,6 +1670,81 @@ namespace SilkSong
             catch (Exception e)
             {
                 MelonLogger.Msg($"Error refilling silk: {e.Message}");
+            }
+        }
+
+
+        private void UnlockAllFastTravel()
+        {
+            try
+            {
+                MelonLogger.Msg("=== UNLOCKING ALL FAST TRAVEL ===");
+
+                // List of all fast travel station PlayerData booleans (from discovery)
+                string[] fastTravelBools = {
+                    "UnlockedAqueductStation",
+                    "UnlockedShadowStation", 
+                    "UnlockedCityStation",
+                    "UnlockedPeakStation",
+                    "UnlockedCoralTowerStation",
+                    "UnlockedShellwoodStation",
+                    "UnlockedBelltownStation",
+                    "UnlockedGreymoorStation",
+                    "UnlockedBoneforestEastStation",
+                    "UnlockedDocksStation"
+                    // Note: Bone and Bonetown have empty PlayerData bools (already unlocked by default)
+                };
+
+                int unlockedCount = 0;
+                foreach (string boolName in fastTravelBools)
+                {
+                    if (SetPlayerDataBool(boolName, true))
+                    {
+                        MelonLogger.Msg($"Unlocked: {boolName}");
+                        unlockedCount++;
+                    }
+                    else
+                    {
+                        MelonLogger.Msg($"Failed to unlock: {boolName}");
+                    }
+                }
+
+                MelonLogger.Msg($"Successfully unlocked {unlockedCount} fast travel locations");
+                MelonLogger.Msg("Fast travel stations should now be available!");
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error unlocking fast travel: {e.Message}");
+            }
+        }
+
+
+        private bool SetPlayerDataBool(string boolName, bool value)
+        {
+            try
+            {
+                Type playerDataType = FindTypeInAssemblies("PlayerData");
+                if (playerDataType == null) return false;
+
+                PropertyInfo instanceProperty = playerDataType.GetProperty("instance", BindingFlags.Public | BindingFlags.Static);
+                if (instanceProperty == null) return false;
+
+                object playerDataInstance = instanceProperty.GetValue(null);
+                if (playerDataInstance == null) return false;
+
+                // Try to set the field directly
+                FieldInfo field = playerDataType.GetField(boolName, BindingFlags.Public | BindingFlags.Instance);
+                if (field != null && field.FieldType == typeof(bool))
+                {
+                    field.SetValue(playerDataInstance, value);
+                    return true;
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
             }
         }
 
