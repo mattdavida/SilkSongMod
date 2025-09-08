@@ -1,39 +1,76 @@
 # Hollow Knight: Silksong - Simple Cheats
 
-![Hollow Knight Silksong Cheat Mod](https://github.com/user-attachments/assets/9facb534-24fb-467c-8111-c2908b833935)
+![Hollow Knight Silksong Cheat Mod](https://github.com/user-attachments/assets/8aacc348-9d27-4e53-af03-710e1a2c0c02)
 
 Professional cheat with GUI interface, customizable keybinds, and balance system.
 
 ## ✨ Key Features
 
-- 🎮 **Professional Tabbed GUI** - Press `INSERT` or `TILDE (~)` to toggle
+- 🎮 **Professional Collapsible GUI** - Press `INSERT` or `TILDE (~)` to toggle
 - 🔧 **Complete Keybind Customization** - Set, clear, or disable all hotkeys
 - ⚖️ **Balance System** - Damage multipliers for easier gameplay without cheat feel
 - 💬 **Toast Notifications** - Visual feedback for every action
-- 📱 **Responsive Design** - Sidebar interface with scrolling support
+- 📱 **Responsive Design** - Collapsible sections with scrolling support
 - ⌨️ **Universal Keyboard Support** - Works with 60%, TKL, laptops, and Mac keyboards
-- 🚫 **Accident Prevention** - Negative inputs to remove accidentally added items
+- 🚫 **Accident Prevention** - Confirmation modals for destructive actions
+- 🛡️ **Player Skills System** - Unlock core abilities (Double Jump, Dash, Wall Jump, etc.)
+- 🎯 **Advanced Tool Management** - Smart tool/skill unlocking with ammo detection
+- 🔄 **Auto-Refresh Features** - Dynamic UI updates and intelligent caching
 
 ## 🎯 What This Does
 
 ### GUI Interface (INSERT/TILDE to toggle)
 
-#### Cheats Tab
+#### 🔄 Toggle Features
+| Feature | Function | Type |
+|---------|----------|------|
+| **Auto Silk Refill** | Automatic silk restoration every 2 seconds | ✅ Toggle |
+| **One Hit Kill Mode** | Massive damage mode for enemies | ✅ Toggle |
+| **Infinite Air Jump** | Unlimited air jumping (cheat mode) | ✅ Toggle |
+
+#### 📊 Action Amounts
 | Feature | Function | Customizable |
 |---------|----------|--------------|
 | **Health System** | Add/remove health with custom amounts | ✅ Input field |
-| **Max Health** | Add/Set exact max health (1-9999) + auto-refill | ✅ Input fields |
-| **Fast Travel** | Unlock all 10 fast travel locations instantly | ✅ One-click |
+| **Max Health** | Set exact max health (1-9999) with confirmation | ✅ Input + Modal |
 | **Currency** | Add money and shards | ✅ Input fields |
-| **Auto Silk Refill** | Automatic silk restoration every 2 seconds | ✅ Toggle |
-| **Unlock Systems** | Crests, tools, items, collectables | ✅ One-click |
-| **One Hit Kill** | Massive damage mode | ✅ Button |
 
-#### Balance Tab
-- **Damage Multipliers**: 1.5x, 2.0x, etc. for easier gameplay
-- **Global Application**: Affects all damage values proportionally
-- **Status Display**: Shows current multiplier with visual feedback
-- **Technical Details**: Optional advanced information for power users
+#### 📦 Collectible Items
+| Feature | Function | Type |
+|---------|----------|------|
+| **Smart Item Management** | Dropdown selection of all collectible items | 🎯 Dynamic |
+| **Custom Amounts** | Set precise quantities for any item | ✅ Input field |
+| **Bulk Operations** | Set multiple items at once | ✅ One-click |
+
+#### 🛠️ Crest Tools
+| Feature | Function | Advanced |
+|---------|----------|----------|
+| **Smart Tool Detection** | Auto-scans ToolItemBasic and ToolItemSkill objects | 🤖 AI-powered |
+| **Skills Only Filter** | Toggle to show only skill-based tools | ✅ Filter |
+| **Ammo Intelligence** | Conditional UI for tools that use ammunition | 🎯 Smart UI |
+| **Display Name Mapping** | Uses proper localized tool names | 🌐 i18n |
+
+#### 🏃 Player Skills
+| Skill | Function | Dual-Layer |
+|-------|----------|------------|
+| **Double Jump** | Unlock aerial double jump ability | ✅ PlayerData + Config |
+| **Dash** | Unlock ground/air dash movement | ✅ PlayerData + Config |
+| **Wall Jump** | Unlock wall jumping ability | ✅ PlayerData + Config |
+| **Charge Attack** | Unlock nail charge attacks | ✅ PlayerData + Config |
+| **Needolin** | Unlock musical instrument ability | ✅ PlayerData + Config |
+| **Glide/Umbrella** | Unlock gliding ability | ✅ PlayerData + Config |
+| **Grappling Hook** | Unlock harpoon dash ability | ✅ PlayerData + Config |
+
+#### ⚡ Quick Actions
+| Action | Function | Safety |
+|--------|----------|--------|
+| **Refill Health** | Instant full health restore | ✅ Instant |
+| **Enable One Hit Kill** | Toggle massive damage mode | ✅ Instant |
+| **Unlock All Crests** | Unlock every crest upgrade | 🛡️ Confirmation Modal |
+| **Unlock All Crest Skills** | Unlock all skill-based crests | 🛡️ Confirmation Modal |
+| **Unlock All Crest Tools** | Unlock all tool-based crests | 🛡️ Confirmation Modal |
+| **Max All Collectables** | Set all collectables to maximum | 🛡️ Confirmation Modal |
+| **Unlock All Fast Travel** | Unlock all 10+ fast travel locations | 🛡️ Confirmation Modal |
 
 ### Hotkeys (Fully Customizable)
 
@@ -95,16 +132,44 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 - **Negative Input Support**: Undo accidental additions
 - **Visual Confirmations**: Know exactly what each action does
 
-## 📝 Notes
+## 📝 Advanced Features
 
-- ✅ **Compatibility**: Works with any save file, new or existing
+### 🛡️ Safety & Confirmation System
+- **Confirmation Modals**: All destructive actions require confirmation
+- **Professional UI**: Opaque modal overlays with clear messaging
+- **Cooldown Protection**: Prevents accidental rapid-fire operations
+- **Visual Feedback**: Toast notifications for all successful operations
+
+### 🤖 Intelligent Systems
+- **Dynamic Tool Scanning**: Auto-discovers ToolItemBasic and ToolItemSkill objects
+- **Smart Ammo Detection**: Conditionally shows ammo controls only when relevant
+- **Display Name Resolution**: Uses proper localized names (e.g., "Sharp dart" not "Silk Charge")
+- **Dual-Layer Unlocking**: PlayerData + HeroControllerConfig for complete ability unlocking
+- **Caching System**: Performance optimization for repeated UI operations
+
+### 🎮 Player Skills Deep Integration
+- **Core Movement**: Double Jump, Dash, Wall Jump with proper state management
+- **Combat Abilities**: Charge Attack with nail system integration
+- **Special Tools**: Needolin (musical doors), Glide/Umbrella for traversal
+- **Advanced Movement**: Grappling Hook (Harpoon Dash) for complex navigation
+
+### 📊 Technical Excellence
+- **Reflection-Based**: Dynamic access to private game systems
+- **Error Handling**: Robust try-catch with meaningful user feedback
+- **Memory Management**: Efficient caching and cleanup
+- **Cross-Platform**: Works with any Unity/MelonLoader configuration
+
+## 📝 Compatibility Notes
+
+- ✅ **Universal Compatibility**: Works with any save file, new or existing
 - 🎯 **Health System**: Add/Set modes with validation (1-9999), auto-refill, save/reload for UI update
 - ⚖️ **Balance System**: Modifies DamageEnemies components proportionally  
-- 🔧 **No Config Files**: Everything managed through intuitive GUI
+- 🔧 **No Config Files**: Everything managed through intuitive collapsible GUI
 - 💾 **Persistent Settings**: Keybind changes remembered between sessions
 - 🖱️ **Full Mouse Support**: Click, drag, and interact with all elements
-- 📱 **Responsive Interface**: Adapts to different screen sizes
+- 📱 **Responsive Interface**: Collapsible sections adapt to different screen sizes
 - ⌨️ **Universal Access**: Dual hotkey support for all keyboard layouts
+- 🛡️ **Safe Operations**: Confirmation modals prevent accidental destructive actions
 
 ## 🏆 Why Choose This Mod?
 

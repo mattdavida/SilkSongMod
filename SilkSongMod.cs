@@ -18,11 +18,10 @@ namespace SilkSong
         private bool autoRefillSilk = false;
         private float silkRefillTimer = 0f;
         private const float SILK_REFILL_INTERVAL = 2.0f;
-
         // GUI Variables
         private bool showGUI = false;
        
-        private Rect windowRect = new Rect(Screen.width - 420, 20, 400, (Screen.height * 0.8f));
+        private Rect windowRect = new Rect(Screen.width - 420, (Screen.height * 0.01f), 400, (Screen.height * 0.98f));
         private UIBase uiBase;
         private bool universeLibInitialized = false;
         
@@ -52,11 +51,68 @@ namespace SilkSong
         private bool oneHitKillEnabled = false;
         private Dictionary<string, object> oneHitKillOriginalValues = new Dictionary<string, object>();
         
+        // Infinite Air Jump toggle system
+        private bool infiniteAirJumpEnabled = false;
+        
         // Input field variables
         private string healthAmount = "1";
         private string moneyAmount = "1000";
         private string shardAmount = "1000";
         private string setHealthAmount = "11"; // For setting exact health
+        
+        // Set Collectable Amount variables
+        private string collectableAmount = "1";
+        private List<string> availableCollectables = new List<string>();
+        private string[] collectableNames = new string[0];
+        private int selectedCollectableIndex = 0;
+        private bool collectablesScanned = false;
+        private bool showCollectableDropdown = false;
+        private Vector2 collectableDropdownScroll = Vector2.zero;
+        private string collectableSearchFilter = "";
+        private string[] filteredCollectableNames = new string[0];
+        private Dictionary<string, string> displayNameToObjectName = new Dictionary<string, string>();
+        
+        // Crest Tools variables
+        private bool toolsScanned = false;
+        private List<string> availableTools = new List<string>();
+        private string[] toolNames = new string[0];
+        private int selectedToolIndex = 0;
+        private bool showToolDropdown = false;
+        private Vector2 toolDropdownScroll = Vector2.zero;
+        
+        // Cache for ammo checking to prevent repeated scanning
+        private int lastAmmoCheckToolIndex = -1;
+        private bool lastAmmoCheckResult = false;
+        private int lastStorageCheckToolIndex = -1;
+        private int lastStorageCheckResult = 0;
+        private string toolSearchFilter = "";
+        private string[] filteredToolNames = new string[0];
+        private string toolStorageAmount = "100";
+        private int lastSelectedToolIndex = -1;
+        private Dictionary<string, string> toolDisplayNameToObjectName = new Dictionary<string, string>();
+        
+        // Tool type filtering
+        private bool showSkillsOnly = false;
+        private List<string> availableSkills = new List<string>();
+        private List<string> availableBasicTools = new List<string>();
+        
+        // Confirmation modal system
+        private bool showConfirmModal = false;
+        private string confirmMessage = "";
+        private string confirmActionName = "";
+        private System.Action pendingAction = null;
+        private static Texture2D solidBlackTexture = null;
+        private float modalCooldownTime = 0f;
+        private Rect modalWindowRect = new Rect(0, 0, 400, 200);
+        
+        // Collapsible section states
+        private bool showToggleFeatures = true;
+        private bool showActionAmounts = true;
+        private bool showCollectibleItems = true;
+        private bool showCrestTools = true;
+        private bool showPlayerSkills = true;
+        private bool showQuickActions = true;
+        private bool showKeybindSettings = false;
         
         // Keybind variables
         private KeyCode[] currentKeybinds = new KeyCode[] 
@@ -67,7 +123,7 @@ namespace SilkSong
         private string[] keybindNames = new string[]
         {
             "Add Health", "Set Health", "Refill Health", "Toggle One Hit Kill", "Add Money",
-            "Add Shards", "Unlock Crests", "Unlock Tools", "Unlock Items", "Max Collectables", "Auto Silk"
+            "Add Shards", "Unlock Crests", "Unlock Crest Skills", "Unlock Crest Tools", "Max Collectables", "Auto Silk"
         };
         private bool isSettingKeybind = false;
         private int keybindToSet = -1;
@@ -76,7 +132,7 @@ namespace SilkSong
         public override void OnApplicationStart()
         {
             MelonLogger.Msg("Silksong Health Mod v1.0 - Ready!");
-            MelonLogger.Msg("Controls: F1=Add Health, F2=Set Health to 11, F3=Refill Health, F4=Toggle One Hit Kill Mode, F5=Add 1000 Money, F6=Add 1000 Shards, F8=Unlock All Crests, F9=Unlock All Tools, F10=Unlock All Items, F11=Max All Collectables, F12=Toggle Auto Silk Refill, INSERT/TILDE=Toggle GUI");
+            MelonLogger.Msg("Controls: F1=Add Health, F2=Set Health to 11, F3=Refill Health, F4=Toggle One Hit Kill Mode, F5=Add 1000 Money, F6=Add 1000 Shards, F8=Unlock All Crests, F9=Unlock All Crest Skills, F10=Unlock All Crest Tools, F11=Max All Collectables, F12=Toggle Auto Silk Refill, INSERT/TILDE=Toggle GUI");
         }
 
         public override void OnInitializeMelon()
@@ -219,12 +275,12 @@ namespace SilkSong
                     UnlockAllCrests();
                 }
 
-                if (Input.GetKeyDown(currentKeybinds[7])) // Unlock Tools
+                if (Input.GetKeyDown(currentKeybinds[7])) // Unlock Crest Skills
                 {
                     UnlockAllTools();
                 }
 
-                if (Input.GetKeyDown(currentKeybinds[8])) // Unlock Items
+                if (Input.GetKeyDown(currentKeybinds[8])) // Unlock Crest Tools
                 {
                     UnlockAllItems();
                 }
@@ -263,6 +319,20 @@ namespace SilkSong
             lastToastMessage = message;
             toastTimer = TOAST_DURATION;
         }
+        
+        private void ShowConfirmation(string actionName, string message, System.Action action)
+        {
+            // Prevent rapid-fire modal creation
+            if (Time.time < modalCooldownTime)
+            {
+                return;
+            }
+            
+            confirmActionName = actionName;
+            confirmMessage = message;
+            pendingAction = action;
+            showConfirmModal = true;
+        }
 
         private void OnUniverseLibInitialized()
         {
@@ -284,6 +354,1104 @@ namespace SilkSong
             MelonLogger.Msg($"[UniverseLib] {message}");
         }
         
+        private void ScanCollectables()
+        {
+            if (collectablesScanned) return;
+            
+            availableCollectables.Clear();
+            displayNameToObjectName.Clear();
+            
+            try
+            {
+                // Find all CollectableItemBasic objects specifically (they have displayName)
+                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(CollectableItemBasic));
+                foreach (UnityEngine.Object obj in allObjects)
+                {
+                    if (obj != null)
+                    {
+                        try
+                        {
+                            Type itemType = obj.GetType();
+                            string displayName = "";
+                            string objectName = obj.name.Replace("(Clone)", "").Trim();
+                            
+                            // Try GetDisplayName method first (most reliable for CollectableItemBasic)
+                            MethodInfo getDisplayNameMethod = itemType.GetMethod("GetDisplayName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                            if (getDisplayNameMethod != null && getDisplayNameMethod.ReturnType == typeof(string))
+                            {
+                                try
+                                {
+                                    // Find ReadSource enum and use default value
+                                    Type readSourceType = FindTypeInAssemblies("ReadSource");
+                                    object readSourceValue = null;
+                                    
+                                    if (readSourceType != null && readSourceType.IsEnum)
+                                    {
+                                        Array enumValues = Enum.GetValues(readSourceType);
+                                        if (enumValues.Length > 0)
+                                        {
+                                            readSourceValue = enumValues.GetValue(0);
+                                        }
+                                    }
+                                    
+                                    object result = getDisplayNameMethod.Invoke(obj, new object[] { readSourceValue });
+                                    if (result != null && !string.IsNullOrEmpty(result.ToString().Trim()))
+                                    {
+                                        displayName = result.ToString().Trim();
+                                    }
+                                }
+                                catch (Exception)
+                                {
+                                    // Silent fallback
+                                }
+                            }
+                            
+                            // Fallback to object name if GetDisplayName failed
+                            if (string.IsNullOrEmpty(displayName))
+                            {
+                                displayName = objectName;
+                            }
+                            
+                            // Add if valid, not duplicate, and not a placeholder/invalid name
+                            if (!string.IsNullOrEmpty(displayName) && 
+                                !availableCollectables.Contains(displayName) &&
+                                !IsInvalidDisplayName(displayName))
+                            {
+                                availableCollectables.Add(displayName);
+                                displayNameToObjectName[displayName] = objectName;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            MelonLogger.Msg($"Error processing collectable {obj.name}: {e.Message}");
+                        }
+                    }
+                }
+                
+                // Sort alphabetically for better UX
+                availableCollectables.Sort();
+                collectableNames = availableCollectables.ToArray();
+                FilterCollectables(); // Initialize filtered list
+                
+                collectablesScanned = true;
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error scanning collectables: {e.Message}");
+            }
+        }
+        
+        private bool IsInvalidDisplayName(string displayName)
+        {
+            if (string.IsNullOrEmpty(displayName)) return true;
+            
+            // Filter out common placeholder/invalid display names
+            string[] invalidNames = { "!!/!!", "!!!", "???", "N/A", "NULL", "PLACEHOLDER", "TBD", "TODO" };
+            
+            foreach (string invalid in invalidNames)
+            {
+                if (displayName.Equals(invalid, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            
+            // Filter out names that are just special characters or symbols
+            if (displayName.Trim().All(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c)))
+            {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        private void FilterCollectables()
+        {
+            if (string.IsNullOrEmpty(collectableSearchFilter))
+            {
+                filteredCollectableNames = collectableNames;
+            }
+            else
+            {
+                var filtered = availableCollectables.Where(name => 
+                    name.ToLower().Contains(collectableSearchFilter.ToLower())).ToArray();
+                filteredCollectableNames = filtered;
+            }
+        }
+        
+        private void ScanTools()
+        {
+            if (toolsScanned) return;
+            
+            availableTools.Clear();
+            availableSkills.Clear();
+            availableBasicTools.Clear();
+            toolDisplayNameToObjectName.Clear();
+            
+            try
+            {
+                // Find all ToolItemBasic objects (they have display names and inherit baseStorageAmount from ToolItem)
+                UnityEngine.Object[] basicObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
+                
+                foreach (UnityEngine.Object obj in basicObjects)
+                {
+                    if (obj != null)
+                    {
+                        try
+                        {
+                            string displayName = GetToolDisplayName(obj);
+                            if (!string.IsNullOrEmpty(displayName) && !IsInvalidDisplayName(displayName))
+                            {
+                                if (!availableTools.Contains(displayName))
+                                {
+                                    availableTools.Add(displayName);
+                                    availableBasicTools.Add(displayName);
+                                    toolDisplayNameToObjectName[displayName] = obj.name;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            MelonLogger.Msg($"Error processing ToolItemBasic {obj.name}: {e.Message}");
+                        }
+                    }
+                }
+                
+                // Also find all ToolItemSkill objects (like Silk Spear, etc.)
+                UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
+                
+                foreach (UnityEngine.Object obj in skillObjects)
+                {
+                    if (obj != null)
+                    {
+                        try
+                        {
+                            string displayName = GetToolDisplayName(obj);
+                            if (!string.IsNullOrEmpty(displayName) && !IsInvalidDisplayName(displayName))
+                            {
+                                if (!availableTools.Contains(displayName))
+                                {
+                                    availableTools.Add(displayName);
+                                    availableSkills.Add(displayName);
+                                    toolDisplayNameToObjectName[displayName] = obj.name;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            MelonLogger.Msg($"Error processing ToolItemSkill {obj.name}: {e.Message}");
+                        }
+                    }
+                }
+                
+                // If we didn't find tools, add some default ones
+                if (availableTools.Count == 0)
+                {
+                    availableTools.AddRange(new string[] { 
+                        "Silk", "Needle", "Healing Bandage", "Binding", "Cocoon", 
+                        "Thread", "Weaving", "Warp", "Bind", "Wrap" 
+                    });
+                }
+                
+                // Sort alphabetically for better UX
+                availableTools.Sort();
+                availableSkills.Sort();
+                availableBasicTools.Sort();
+                toolNames = availableTools.ToArray();
+                
+                
+                FilterTools(); // Initialize filtered list
+                
+                toolsScanned = true;
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error scanning tools: {e.Message}");
+            }
+        }
+        
+        private string GetToolDisplayName(UnityEngine.Object toolObj)
+        {
+            if (toolObj == null) return null;
+            
+            try
+            {
+                Type toolType = toolObj.GetType();
+                
+                // Try DisplayName property first (might be a property on ToolItemSkill)
+                PropertyInfo displayNameProperty = toolType.GetProperty("DisplayName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (displayNameProperty != null)
+                {
+                    try
+                    {
+                        object propertyValue = displayNameProperty.GetValue(toolObj);
+                        if (propertyValue != null && !string.IsNullOrEmpty(propertyValue.ToString()))
+                        {
+                            return propertyValue.ToString();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        MelonLogger.Msg($"Error getting DisplayName property: {e.Message}");
+                    }
+                }
+                
+                // Try displayName field (LocalisedString)
+                FieldInfo displayNameField = toolType.GetField("displayName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (displayNameField != null)
+                {
+                    object displayNameValue = displayNameField.GetValue(toolObj);
+                    if (displayNameValue != null)
+                    {
+                        // Try GetDisplayName method if it's a LocalisedString
+                        Type displayNameType = displayNameValue.GetType();
+                        MethodInfo getDisplayNameMethod = displayNameType.GetMethod("GetDisplayName", BindingFlags.Public | BindingFlags.Instance);
+                        if (getDisplayNameMethod != null)
+                        {
+                            try
+                            {
+                                // Try with ReadSource parameter
+                                object result = getDisplayNameMethod.Invoke(displayNameValue, new object[] { 0 });
+                                if (result != null && !string.IsNullOrEmpty(result.ToString()))
+                                {
+                                    return result.ToString();
+                                }
+                            }
+                            catch
+                            {
+                                // Try without parameters
+                                try
+                                {
+                                    object result = getDisplayNameMethod.Invoke(displayNameValue, null);
+                                    if (result != null && !string.IsNullOrEmpty(result.ToString()))
+                                    {
+                                        return result.ToString();
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                        
+                        // Fallback to ToString
+                        string displayStr = displayNameValue.ToString();
+                        if (!string.IsNullOrEmpty(displayStr) && displayStr != displayNameType.Name)
+                        {
+                            return displayStr;
+                        }
+                    }
+                }
+                
+                // Fallback to name field
+                FieldInfo nameField = toolType.GetField("name", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (nameField != null)
+                {
+                    object nameValue = nameField.GetValue(toolObj);
+                    if (nameValue != null)
+                    {
+                        return nameValue.ToString();
+                    }
+                }
+                
+                // Last resort: use object name
+                return toolObj.name;
+            }
+            catch (Exception)
+            {
+                return toolObj.name;
+            }
+        }
+        
+        private void FilterTools()
+        {
+            List<string> sourceList = new List<string>();
+            
+            if (showSkillsOnly)
+            {
+                // Build skills list fresh from ToolItemSkill objects (same as unlock method)
+                UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
+                
+                foreach (UnityEngine.Object obj in skillObjects)
+                {
+                    if (obj != null)
+                    {
+                        try
+                        {
+                            string displayName = GetToolDisplayName(obj);
+                            if (!string.IsNullOrEmpty(displayName) && !IsInvalidDisplayName(displayName))
+                            {
+                                if (!sourceList.Contains(displayName))
+                                {
+                                    sourceList.Add(displayName);
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                sourceList.Sort();
+            }
+            else
+            {
+                // Use all tools
+                sourceList = availableTools;
+            }
+            
+            if (string.IsNullOrEmpty(toolSearchFilter))
+            {
+                filteredToolNames = sourceList.ToArray();
+            }
+            else
+            {
+                var filtered = sourceList.Where(name => 
+                    name.ToLower().Contains(toolSearchFilter.ToLower())).ToArray();
+                filteredToolNames = filtered;
+            }
+            
+        }
+        
+        private void UnlockSpecificTool(string toolDisplayName)
+        {
+            try
+            {
+                bool found = false;
+                
+                // First try ToolItemBasic objects
+                UnityEngine.Object[] basicObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
+                
+                foreach (UnityEngine.Object obj in basicObjects)
+                {
+                    if (obj != null && obj.GetType().Name == "ToolItemBasic")
+                    {
+                        try
+                        {
+                            string objectDisplayName = GetToolDisplayName(obj);
+                            if (objectDisplayName == toolDisplayName)
+                            {
+                                // Found the matching tool, use the same unlock logic as UnlockAllItems
+                                Type toolType = obj.GetType();
+                                MethodInfo unlockMethod = toolType.GetMethod("Unlock");
+                                
+                                if (unlockMethod != null)
+                                {
+                                    // Find PopupFlags enum in nested types (same as UnlockAllItems)
+                                    Type popupFlagsType = null;
+                                    Type[] nestedTypes = toolType.GetNestedTypes();
+                                    foreach (Type nested in nestedTypes)
+                                    {
+                                        if (nested.Name.Contains("PopupFlags"))
+                                        {
+                                            popupFlagsType = nested;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (popupFlagsType != null)
+                                    {
+                                        object itemGetFlag = Enum.Parse(popupFlagsType, "ItemGet");
+                                        unlockMethod.Invoke(obj, new object[] { null, itemGetFlag });
+                                    }
+                                    else
+                                    {
+                                        unlockMethod.Invoke(obj, new object[] { null, null });
+                                    }
+                                    
+                                    ShowToast($"Unlocked {toolDisplayName}!");
+                                    found = true;
+                                    return;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            MelonLogger.Msg($"Error processing tool {obj.name}: {e.Message}");
+                        }
+                    }
+                }
+                
+                // If not found in ToolItemBasic, try ToolItemSkill objects
+                if (!found)
+                {
+                    UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
+                    
+                    foreach (UnityEngine.Object obj in skillObjects)
+                    {
+                        if (obj != null && obj.GetType().Name == "ToolItemSkill")
+                        {
+                            try
+                            {
+                                string objectDisplayName = GetToolDisplayName(obj);
+                                if (objectDisplayName == toolDisplayName)
+                                {
+                                    // Found the matching ToolItemSkill, use the same unlock logic as F9 hotkey
+                                    Type toolType = obj.GetType();
+                                    MethodInfo unlockMethod = toolType.GetMethod("Unlock");
+                                    
+                                    if (unlockMethod != null)
+                                    {
+                                        // Find PopupFlags enum in nested types (same as F9 logic)
+                                        Type popupFlagsType = null;
+                                        Type[] nestedTypes = toolType.GetNestedTypes();
+                                        foreach (Type nested in nestedTypes)
+                                        {
+                                            if (nested.Name.Contains("PopupFlags"))
+                                            {
+                                                popupFlagsType = nested;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (popupFlagsType != null)
+                                        {
+                                            object itemGetFlag = Enum.Parse(popupFlagsType, "ItemGet");
+                                            unlockMethod.Invoke(obj, new object[] { null, itemGetFlag });
+                                        }
+                                        else
+                                        {
+                                            unlockMethod.Invoke(obj, new object[] { null, null });
+                                        }
+                                        
+                                        ShowToast($"Unlocked {toolDisplayName}!");
+                                        found = true;
+                                        return;
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                MelonLogger.Msg($"Error processing ToolItemSkill {obj.name}: {e.Message}");
+                            }
+                        }
+                    }
+                }
+                
+                if (!found)
+                {
+                    ShowToast($"Could not find tool: {toolDisplayName}");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking {toolDisplayName}: {e.Message}");
+            }
+        }
+        
+        
+        private void SetToolStorage(string toolDisplayName, int amount)
+        {
+            try
+            {
+                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
+                
+                foreach (UnityEngine.Object obj in allObjects)
+                {
+                    if (obj != null)
+                    {
+                        try
+                        {
+                            string objectDisplayName = GetToolDisplayName(obj);
+                            
+                            if (objectDisplayName == toolDisplayName)
+                            {
+                                // Find baseStorageAmount field in the inheritance hierarchy
+                                FieldInfo baseStorageField = null;
+                                Type currentType = obj.GetType();
+                                
+                                while (currentType != null && baseStorageField == null)
+                                {
+                                    baseStorageField = currentType.GetField("baseStorageAmount", 
+                                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                                    currentType = currentType.BaseType;
+                                }
+                                
+                                if (baseStorageField != null)
+                                {
+                                    // Check if this tool actually has storage (> 0) before allowing modification
+                                    int currentAmount = (int)baseStorageField.GetValue(obj);
+                                    
+                                    if (currentAmount > 0)
+                                    {
+                                        baseStorageField.SetValue(obj, amount);
+                                        ShowToast($"Set {toolDisplayName} storage to {amount}!");
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        ShowToast($"{toolDisplayName} doesn't use storage (action tool)");
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    ShowToast($"{toolDisplayName} has no storage field");
+                                    return;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            MelonLogger.Msg($"Error processing tool {obj.name}: {e.Message}");
+                        }
+                    }
+                }
+                
+                ShowToast($"Could not find tool: {toolDisplayName}");
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error setting storage: {e.Message}");
+            }
+        }
+        
+        private void RefillToolAmmo(string toolDisplayName)
+        {
+            try
+            {
+                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
+                
+                foreach (UnityEngine.Object obj in allObjects)
+                {
+                    if (obj != null)
+                    {
+                        try
+                        {
+                            string objectDisplayName = GetToolDisplayName(obj);
+                            
+                            if (objectDisplayName == toolDisplayName)
+                            {
+                                // Check if this tool has storage before trying to refill
+                                FieldInfo baseStorageField = null;
+                                Type currentType = obj.GetType();
+                                
+                                while (currentType != null && baseStorageField == null)
+                                {
+                                    baseStorageField = currentType.GetField("baseStorageAmount", 
+                                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                                    currentType = currentType.BaseType;
+                                }
+                                
+                                if (baseStorageField != null)
+                                {
+                                    int currentAmount = (int)baseStorageField.GetValue(obj);
+                                    
+                                    if (currentAmount > 0)
+                                    {
+                                        // Tool has storage, use CollectFree to refill ammo
+                                        Type toolType = obj.GetType();
+                                        MethodInfo collectFreeMethod = toolType.GetMethod("CollectFree", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                                        
+                                        if (collectFreeMethod != null)
+                                        {
+                                            collectFreeMethod.Invoke(obj, new object[] { 9999 });
+                                            ShowToast($"Refilled {toolDisplayName} ammo!");
+                                            return;
+                                        }
+                                        else
+                                        {
+                                            ShowToast($"CollectFree method not found for {toolDisplayName}");
+                                            return;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        ShowToast($"{toolDisplayName} doesn't use ammo (action tool)");
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    ShowToast($"{toolDisplayName} has no storage field");
+                                    return;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            MelonLogger.Msg($"Error processing tool {obj.name}: {e.Message}");
+                        }
+                    }
+                }
+                
+                ShowToast($"Could not find tool: {toolDisplayName}");
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error refilling ammo: {e.Message}");
+            }
+        }
+        
+        private void UnlockDoubleJump()
+        {
+            try
+            {
+                if (SetPlayerDataBool("hasDoubleJump", true))
+                {
+                    ShowToast("Double Jump unlocked!");
+                    MelonLogger.Msg("Successfully unlocked double jump (playerData.hasDoubleJump = true)");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Double Jump - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.hasDoubleJump");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Double Jump: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockDoubleJump: {e.Message}");
+            }
+        }
+        
+        private void UnlockDash()
+        {
+            try
+            {
+                if (SetPlayerDataBool("hasDash", true))
+                {
+                    ShowToast("Dash unlocked!");
+                    MelonLogger.Msg("Successfully unlocked dash (playerData.hasDash = true)");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Dash - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.hasDash");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Dash: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockDash: {e.Message}");
+            }
+        }
+        
+        private void UnlockWallJump()
+        {
+            try
+            {
+                if (SetPlayerDataBool("hasWalljump", true))
+                {
+                    ShowToast("Wall Jump unlocked!");
+                    MelonLogger.Msg("Successfully unlocked wall jump (playerData.hasWalljump = true)");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Wall Jump - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.hasWalljump");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Wall Jump: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockWallJump: {e.Message}");
+            }
+        }
+        
+        private void UnlockChargeAttack()
+        {
+            try
+            {
+                bool playerDataSet = SetPlayerDataBool("hasChargeSlash", true);
+                bool configSet = SetHeroConfigBool("canNailCharge", true);
+                
+                if (playerDataSet && configSet)
+                {
+                    ShowToast("Charge Attack fully unlocked! (PlayerData + Config)");
+                    MelonLogger.Msg("Successfully unlocked charge attack (playerData.hasChargeSlash = true, Config.canNailCharge = true)");
+                }
+                else if (playerDataSet)
+                {
+                    ShowToast("Charge Attack partially unlocked (PlayerData only)");
+                    MelonLogger.Msg("Set playerData.hasChargeSlash = true, but failed to set Config.canNailCharge");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Charge Attack - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.hasChargeSlash");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Charge Attack: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockChargeAttack: {e.Message}");
+            }
+        }
+        
+        private void UnlockNeedolin()
+        {
+            try
+            {
+                // Needolin requires BOTH playerData.hasNeedolin AND Config.canPlayNeedolin
+                bool playerDataSet = SetPlayerDataBool("hasNeedolin", true);
+                bool configSet = SetHeroConfigBool("canPlayNeedolin", true);
+                
+                if (playerDataSet && configSet)
+                {
+                    ShowToast("Needolin unlocked! 🎵");
+                    MelonLogger.Msg("Successfully unlocked Needolin (playerData.hasNeedolin = true, Config.canPlayNeedolin = true)");
+                }
+                else if (playerDataSet)
+                {
+                    ShowToast("Needolin partially unlocked (PlayerData only)");
+                    MelonLogger.Msg("Set playerData.hasNeedolin = true, but failed to set Config.canPlayNeedolin");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Needolin - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.hasNeedolin");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Needolin: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockNeedolin: {e.Message}");
+            }
+        }
+        
+        private void UnlockGlide()
+        {
+            try
+            {
+                // Glide requires BOTH playerData.hasBrolly AND Config.canBrolly
+                bool playerDataSet = SetPlayerDataBool("hasBrolly", true);
+                bool configSet = SetHeroConfigBool("canBrolly", true);
+                
+                if (playerDataSet && configSet)
+                {
+                    ShowToast("Glide/Drifter's Cloak unlocked! ☂️");
+                    MelonLogger.Msg("Successfully unlocked Glide (playerData.hasBrolly = true, Config.canBrolly = true)");
+                }
+                else if (playerDataSet)
+                {
+                    ShowToast("Glide partially unlocked (PlayerData only)");
+                    MelonLogger.Msg("Set playerData.hasBrolly = true, but failed to set Config.canBrolly");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Glide - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.hasBrolly");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Glide: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockGlide: {e.Message}");
+            }
+        }
+        
+        private void UnlockGrapplingHook()
+        {
+            try
+            {
+                // Grappling Hook requires BOTH playerData.hasHarpoonDash AND Config.canHarpoonDash
+                bool playerDataSet = SetPlayerDataBool("hasHarpoonDash", true);
+                bool configSet = SetHeroConfigBool("canHarpoonDash", true);
+                
+                if (playerDataSet && configSet)
+                {
+                    ShowToast("Grappling Hook unlocked! 🎣 (Clawline Ancestral Art)");
+                    MelonLogger.Msg("Successfully unlocked Grappling Hook (playerData.hasHarpoonDash = true, Config.canHarpoonDash = true)");
+                }
+                else if (playerDataSet)
+                {
+                    ShowToast("Grappling Hook partially unlocked (PlayerData only)");
+                    MelonLogger.Msg("Set playerData.hasHarpoonDash = true, but failed to set Config.canHarpoonDash");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Grappling Hook - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.hasHarpoonDash");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Grappling Hook: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockGrapplingHook: {e.Message}");
+            }
+        }
+        
+        // TODO: Re-implement these after learning more about their requirements
+        /*
+        private void UnlockHarpoonDash()
+        {
+            try
+            {
+                if (SetPlayerDataBool("hasHarpoonDash", true))
+                {
+                    ShowToast("Harpoon Dash unlocked!");
+                    MelonLogger.Msg("Successfully unlocked harpoon dash (playerData.hasHarpoonDash = true)");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Harpoon Dash - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.hasHarpoonDash");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Harpoon Dash: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockHarpoonDash: {e.Message}");
+            }
+        }
+        
+        private void UnlockSuperJump()
+        {
+            try
+            {
+                // Super Jump requires both hasSuperJump AND hasHarpoonDash
+                bool superJumpSet = SetPlayerDataBool("hasSuperJump", true);
+                bool harpoonDashSet = SetPlayerDataBool("hasHarpoonDash", true);
+                
+                if (superJumpSet && harpoonDashSet)
+                {
+                    ShowToast("Super Jump unlocked! (includes Harpoon Dash)");
+                    MelonLogger.Msg("Successfully unlocked super jump (playerData.hasSuperJump = true, playerData.hasHarpoonDash = true)");
+                }
+                else
+                {
+                    ShowToast("Failed to unlock Super Jump - enter game first");
+                    MelonLogger.Msg($"Failed to set Super Jump requirements (hasSuperJump: {superJumpSet}, hasHarpoonDash: {harpoonDashSet})");
+                }
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error unlocking Super Jump: {e.Message}");
+                MelonLogger.Msg($"Error in UnlockSuperJump: {e.Message}");
+            }
+        }
+        */
+        
+        private void ToggleInfiniteAirJump()
+        {
+            try
+            {
+                infiniteAirJumpEnabled = !infiniteAirJumpEnabled;
+                
+                if (SetPlayerDataBool("infiniteAirJump", infiniteAirJumpEnabled))
+                {
+                    string status = infiniteAirJumpEnabled ? "enabled" : "disabled";
+                    ShowToast($"Infinite Air Jump {status}!");
+                    MelonLogger.Msg($"Successfully {status} infinite air jump (playerData.infiniteAirJump = {infiniteAirJumpEnabled})");
+                }
+                else
+                {
+                    // Revert the toggle if setting failed
+                    infiniteAirJumpEnabled = !infiniteAirJumpEnabled;
+                    ShowToast("Failed to toggle Infinite Air Jump - enter game first");
+                    MelonLogger.Msg("Failed to set playerData.infiniteAirJump");
+                }
+            }
+            catch (Exception e)
+            {
+                // Revert the toggle if error occurred
+                infiniteAirJumpEnabled = !infiniteAirJumpEnabled;
+                ShowToast($"Error toggling Infinite Air Jump: {e.Message}");
+                MelonLogger.Msg($"Error in ToggleInfiniteAirJump: {e.Message}");
+            }
+        }
+        
+        private bool SelectedToolUsesAmmo()
+        {
+            if (selectedToolIndex >= toolNames.Length) return false;
+            
+            // Use cache to avoid repeated scanning
+            if (lastAmmoCheckToolIndex == selectedToolIndex)
+            {
+                return lastAmmoCheckResult;
+            }
+            
+            try
+            {
+                string selectedTool = toolNames[selectedToolIndex];
+                
+                // Check ToolItemSkill objects FIRST - they never use ammo
+                UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
+                
+                foreach (UnityEngine.Object obj in skillObjects)
+                {
+                    if (obj != null)
+                    {
+                        string objectDisplayName = GetToolDisplayName(obj);
+                        
+                        if (objectDisplayName == selectedTool)
+                        {
+                            // ToolItemSkill objects don't use ammo (they're skills, not consumables)
+                            lastAmmoCheckToolIndex = selectedToolIndex;
+                            lastAmmoCheckResult = false;
+                            return false;
+                        }
+                    }
+                }
+                
+                // Then check ToolItemBasic objects
+                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
+                
+                foreach (UnityEngine.Object obj in allObjects)
+                {
+                    if (obj != null)
+                    {
+                        string objectDisplayName = GetToolDisplayName(obj);
+                        
+                        if (objectDisplayName == selectedTool)
+                        {
+                            // Check if tool has baseStorageAmount > 0
+                            FieldInfo baseStorageField = null;
+                            Type currentType = obj.GetType();
+                            
+                            while (currentType != null && baseStorageField == null)
+                            {
+                                baseStorageField = currentType.GetField("baseStorageAmount", 
+                                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                                currentType = currentType.BaseType;
+                            }
+                            
+                            if (baseStorageField != null)
+                            {
+                                int currentAmount = (int)baseStorageField.GetValue(obj);
+                                bool hasAmmo = currentAmount > 0;
+                                lastAmmoCheckToolIndex = selectedToolIndex;
+                                lastAmmoCheckResult = hasAmmo;
+                                return hasAmmo; // Tool uses ammo if storage > 0
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+            
+            // Cache the result
+            lastAmmoCheckToolIndex = selectedToolIndex;
+            lastAmmoCheckResult = false;
+            return false;
+        }
+        
+        private int GetSelectedToolCurrentStorage()
+        {
+            if (selectedToolIndex >= toolNames.Length) return 0;
+            
+            // Use cache to avoid repeated scanning
+            if (lastStorageCheckToolIndex == selectedToolIndex)
+            {
+                return lastStorageCheckResult;
+            }
+            
+            try
+            {
+                string selectedTool = toolNames[selectedToolIndex];
+                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
+                
+                foreach (UnityEngine.Object obj in allObjects)
+                {
+                    if (obj != null)
+                    {
+                        string objectDisplayName = GetToolDisplayName(obj);
+                        
+                        if (objectDisplayName == selectedTool)
+                        {
+                            // Get current baseStorageAmount value
+                            FieldInfo baseStorageField = null;
+                            Type currentType = obj.GetType();
+                            
+                            while (currentType != null && baseStorageField == null)
+                            {
+                                baseStorageField = currentType.GetField("baseStorageAmount", 
+                                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                                currentType = currentType.BaseType;
+                            }
+                            
+                            if (baseStorageField != null)
+                            {
+                                return (int)baseStorageField.GetValue(obj);
+                            }
+                        }
+                    }
+                }
+                
+                // Also check ToolItemSkill objects
+                UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
+                
+                foreach (UnityEngine.Object obj in skillObjects)
+                {
+                    if (obj != null)
+                    {
+                        string objectDisplayName = GetToolDisplayName(obj);
+                        
+                        if (objectDisplayName == selectedTool)
+                        {
+                            // Get current baseStorageAmount value
+                            FieldInfo baseStorageField = null;
+                            Type currentType = obj.GetType();
+                            
+                            while (currentType != null && baseStorageField == null)
+                            {
+                                baseStorageField = currentType.GetField("baseStorageAmount", 
+                                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                                currentType = currentType.BaseType;
+                            }
+                            
+                            if (baseStorageField != null)
+                            {
+                                return (int)baseStorageField.GetValue(obj);
+                            }
+                            else
+                            {
+                                // ToolItemSkill without baseStorageAmount field = no storage
+                                return 0;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+            
+            return 0;
+        }
+        
+        private bool SetHeroConfigBool(string fieldName, bool value)
+        {
+            try
+            {
+                // Get HeroController instance
+                var heroController = GameObject.FindFirstObjectByType<HeroController>();
+                if (heroController == null)
+                {
+                    MelonLogger.Msg($"HeroController not found - cannot set {fieldName}");
+                    return false;
+                }
+
+                // Get the Config property
+                var configProperty = heroController.GetType().GetProperty("Config");
+                if (configProperty == null)
+                {
+                    MelonLogger.Msg("Config property not found on HeroController");
+                    return false;
+                }
+
+                var config = configProperty.GetValue(heroController);
+                if (config == null)
+                {
+                    MelonLogger.Msg("Config object is null");
+                    return false;
+                }
+
+                // Get the field using reflection (it's private, so we need NonPublic)
+                var field = config.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+                if (field == null)
+                {
+                    MelonLogger.Msg($"Field '{fieldName}' not found in HeroControllerConfig");
+                    return false;
+                }
+
+                // Set the field value
+                field.SetValue(config, value);
+                MelonLogger.Msg($"Successfully set HeroControllerConfig.{fieldName} = {value}");
+                return true;
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error setting HeroControllerConfig.{fieldName}: {e.Message}");
+                return false;
+            }
+        }
+        
         private void ScanDamageFields()
         {
             if (fieldsScanned) return;
@@ -292,17 +1460,24 @@ namespace SilkSong
             damageBehaviours.Clear();
             originalValues.Clear();
             
-            MonoBehaviour[] allBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            // Use Resources.FindObjectsOfTypeAll instead of FindObjectsByType
+            // This finds ALL objects, including inactive ones and those in other scenes
+            UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(MonoBehaviour));
+            MelonLogger.Msg($"Scanning {allObjects.Length} total objects for damage fields");
             
-            foreach (MonoBehaviour behaviour in allBehaviours)
+            foreach (UnityEngine.Object obj in allObjects)
             {
+                if (obj == null) continue;
+                
+                MonoBehaviour behaviour = obj as MonoBehaviour;
                 if (behaviour == null) continue;
                 
                 Type type = behaviour.GetType();
                 string typeName = type.Name.ToLower();
                 
                 // Focus on DamageEnemies and similar combat components
-                if (typeName.Contains("damage") || typeName.Contains("attack") || typeName.Contains("combat"))
+                if (typeName.Contains("damage") || typeName.Contains("attack") || typeName.Contains("combat") || 
+                    typeName.Contains("enemy") || typeName.Contains("weapon") || typeName.Contains("projectile"))
                 {
                     FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                     
@@ -311,7 +1486,8 @@ namespace SilkSong
                         string fieldName = field.Name.ToLower();
                         
                         // Look for damage-related fields
-                        if ((fieldName.Contains("damage") || fieldName.Contains("multiplier") || fieldName.Contains("power"))
+                        if ((fieldName.Contains("damage") || fieldName.Contains("multiplier") || fieldName.Contains("power") ||
+                             fieldName.Contains("strength") || fieldName.Contains("force"))
                             && (field.FieldType == typeof(float) || field.FieldType == typeof(int)))
                         {
                             try
@@ -322,11 +1498,13 @@ namespace SilkSong
                                     damageFields.Add(field);
                                     damageBehaviours.Add(behaviour);
                                     originalValues[field] = currentValue;
+                                    MelonLogger.Msg($"Found: {type.Name}.{field.Name} = {currentValue}");
                                 }
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
                                 // Skip inaccessible fields
+                                MelonLogger.Msg($"Skipped {type.Name}.{field.Name}: {ex.Message}");
                             }
                         }
                     }
@@ -396,7 +1574,42 @@ namespace SilkSong
         {
             if (showGUI)
             {
+                // Set window background opacity (more opaque than default)
+                Color originalBackground = GUI.backgroundColor;
+                GUI.backgroundColor = new Color(originalBackground.r, originalBackground.g, originalBackground.b, 1.0f);
+                
                 windowRect = GUI.Window(0, windowRect, GuiWindow, "SILKSONG CHEATS");
+                
+                // Reset background color
+                GUI.backgroundColor = originalBackground;
+            }
+
+            // Draw confirmation modal as separate window if needed (always check, regardless of showGUI)
+            if (showConfirmModal)
+            {
+                // Create solid black overlay first
+                if (solidBlackTexture == null)
+                {
+                    solidBlackTexture = new Texture2D(1, 1);
+                    solidBlackTexture.SetPixel(0, 0, new Color(0, 0, 0, 0.8f));
+                    solidBlackTexture.Apply();
+                }
+                
+                // Draw full screen overlay
+                GUI.depth = -1000;
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), solidBlackTexture);
+                
+                // Center the modal on screen
+                modalWindowRect.x = (Screen.width - modalWindowRect.width) / 2;
+                modalWindowRect.y = (Screen.height - modalWindowRect.height) / 2;
+                
+                // Draw modal window with high depth priority and full opacity
+                GUI.depth = -999;
+                Color originalBackground = GUI.backgroundColor;
+                GUI.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1.0f); // Dark gray, fully opaque
+                modalWindowRect = GUI.Window(54321, modalWindowRect, DrawConfirmModal, $"Confirm {confirmActionName}");
+                GUI.backgroundColor = originalBackground;
+                GUI.depth = 0;
             }
         }
 
@@ -461,7 +1674,77 @@ namespace SilkSong
             }
 
             GUILayout.EndVertical();
+            
+            
             GUI.DragWindow(new Rect(0, 0, windowRect.width, 30));
+        }
+
+        private void DrawConfirmModal(int windowID)
+        {
+            GUILayout.BeginVertical();
+            
+            // Message with better styling
+            GUI.color = Color.white;
+            GUIStyle messageStyle = new GUIStyle(GUI.skin.label);
+            messageStyle.wordWrap = true;
+            messageStyle.normal.textColor = Color.white;
+            messageStyle.fontSize = 14;
+            messageStyle.padding = new RectOffset(10, 10, 10, 10);
+            
+            GUILayout.Label(confirmMessage, messageStyle, GUILayout.ExpandWidth(true), GUILayout.MinHeight(80));
+            
+            GUILayout.FlexibleSpace();
+            
+            // Buttons
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            
+            // Yes button (positive action - green)
+            GUI.color = Color.green;
+            if (GUILayout.Button("Yes", GUILayout.Width(100), GUILayout.Height(30)))
+            {
+                pendingAction?.Invoke();
+                showConfirmModal = false;
+                pendingAction = null;
+                modalCooldownTime = Time.time + 0.2f;
+            }
+            
+            GUILayout.Space(20);
+            
+            // No button (neutral - white)
+            GUI.color = Color.white;
+            if (GUILayout.Button("No", GUILayout.Width(100), GUILayout.Height(30)))
+            {
+                showConfirmModal = false;
+                pendingAction = null;
+                modalCooldownTime = Time.time + 0.2f;
+            }
+            
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            
+            GUILayout.Space(10);
+            GUILayout.EndVertical();
+            GUI.color = Color.white;
+        }
+        
+        private bool DrawCollapsingHeader(string title, bool isExpanded)
+        {
+            // Create arrow icon based on state
+            string arrow = isExpanded ? "▼" : "►";
+            string displayText = $"{arrow} {title}";
+            
+            // Use a darker color for collapsed sections
+            if (!isExpanded)
+            {
+                GUI.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+            }
+            
+            bool clicked = GUILayout.Button(displayText, GUILayout.Height(25));
+            
+            GUI.color = Color.white; // Reset color
+            
+            return clicked ? !isExpanded : isExpanded;
         }
 
         private void DrawCheatsTab()
@@ -469,8 +1752,12 @@ namespace SilkSong
             // Begin scroll view
             scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(380), GUILayout.Height(windowRect.height - 120));
 
-            // Toggle section (only implemented features)
-            GUILayout.Label("Toggle Features", GUI.skin.box);
+            // Toggle Features section
+            showToggleFeatures = DrawCollapsingHeader("Toggle Features", showToggleFeatures);
+            if (showToggleFeatures)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
+                
             bool newAutoSilk = GUILayout.Toggle(autoRefillSilk, "Auto Silk Refill (every 2 seconds)");
             if (newAutoSilk != autoRefillSilk)
             {
@@ -485,10 +1772,22 @@ namespace SilkSong
                 ShowToast($"One Hit Kill: {(oneHitKillEnabled ? "Enabled" : "Disabled")}");
             }
 
-            GUILayout.Space(10);
+            bool newInfiniteAirJump = GUILayout.Toggle(infiniteAirJumpEnabled, "Infinite Air Jump");
+            if (newInfiniteAirJump != infiniteAirJumpEnabled)
+            {
+                ToggleInfiniteAirJump();
+            }
 
-            // Input fields section
-            GUILayout.Label("Action Amounts", GUI.skin.box);
+                GUILayout.EndVertical();
+            }
+
+            GUILayout.Space(5);
+
+            // Action Amounts section
+            showActionAmounts = DrawCollapsingHeader("Action Amounts", showActionAmounts);
+            if (showActionAmounts)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
             
             GUILayout.BeginHorizontal();
             GUILayout.Label("Health:", GUILayout.Width(80));
@@ -511,12 +1810,15 @@ namespace SilkSong
             {
                 if (int.TryParse(setHealthAmount, out int targetHealth))
                 {
-                    SetMaxHealthExact(targetHealth);
-                    ShowToast($"Set max health to {targetHealth} - Save & reload to see UI!");
+                    ShowConfirmation("Set Health", 
+                        $"This will set health to {targetHealth}. You must quit to main menu and restart to see the effect in game. Max amount that will show in UI is 11.", 
+                        () => {
+                            SetMaxHealthExact(targetHealth);
+                            ShowToast($"Set max health to {targetHealth} - Save & reload to see UI!");
+                        });
                 }
             }
             GUILayout.EndHorizontal();
-
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("Money:", GUILayout.Width(80));
@@ -544,10 +1846,376 @@ namespace SilkSong
             }
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(10);
+                GUILayout.EndVertical();
+            }
 
-            // Quick action buttons
-            GUILayout.Label("Quick Actions", GUI.skin.box);
+            GUILayout.Space(5);
+
+            // Collectible Items section
+            showCollectibleItems = DrawCollapsingHeader("Collectible Items", showCollectibleItems);
+            if (showCollectibleItems)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
+                
+                // Scan collectables on first access
+                if (!collectablesScanned)
+                {
+                    ScanCollectables();
+                }
+                
+                if (collectableNames.Length > 0)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("Item:", GUILayout.Width(80));
+                    
+                    // Dropdown button
+                    string currentSelection = selectedCollectableIndex < collectableNames.Length ? collectableNames[selectedCollectableIndex] : "Select Item";
+                    
+                    if (GUILayout.Button($"{currentSelection} ▼", GUILayout.Width(180)))
+                    {
+                        showCollectableDropdown = !showCollectableDropdown;
+                        if (showCollectableDropdown)
+                        {
+                            collectableSearchFilter = ""; // Reset search when opening
+                            FilterCollectables();
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+                    
+                    // Dropdown with search
+                    if (showCollectableDropdown)
+                    {
+                        GUILayout.BeginVertical(GUI.skin.box);
+                        
+                        // Search box
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label("Search:", GUILayout.Width(50));
+                        string newFilter = GUILayout.TextField(collectableSearchFilter, GUILayout.Width(130));
+                        if (newFilter != collectableSearchFilter)
+                        {
+                            collectableSearchFilter = newFilter;
+                            FilterCollectables();
+                            collectableDropdownScroll = Vector2.zero; // Reset scroll when filtering
+                        }
+                        GUILayout.EndHorizontal();
+                        
+                        // Clear search button
+                        if (!string.IsNullOrEmpty(collectableSearchFilter))
+                        {
+                            if (GUILayout.Button("Clear", GUILayout.Width(60)))
+                            {
+                                collectableSearchFilter = "";
+                                FilterCollectables();
+                            }
+                        }
+                        
+                        // Scrollable filtered list
+                        collectableDropdownScroll = GUILayout.BeginScrollView(collectableDropdownScroll, GUILayout.Height(150));
+                        
+                        if (filteredCollectableNames.Length > 0)
+                        {
+                            for (int i = 0; i < filteredCollectableNames.Length; i++)
+                            {
+                                string itemName = filteredCollectableNames[i];
+                                
+                                // Find the index in the original array
+                                int originalIndex = Array.IndexOf(collectableNames, itemName);
+                                
+                                if (GUILayout.Button(itemName, GUI.skin.label))
+                                {
+                                    selectedCollectableIndex = originalIndex;
+                                    showCollectableDropdown = false;
+                                    collectableSearchFilter = ""; // Clear search after selection
+                                }
+                            }
+                        }
+                        else
+                        {
+                            GUILayout.Label("No items match search", GUI.skin.label);
+                        }
+                        
+                        GUILayout.EndScrollView();
+                        GUILayout.EndVertical();
+                    }
+                
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Amount:", GUILayout.Width(80));
+                collectableAmount = GUILayout.TextField(collectableAmount, GUILayout.Width(60));
+                if (GUILayout.Button("Set", GUILayout.Width(50)))
+                {
+                    if (int.TryParse(collectableAmount, out int amount) && selectedCollectableIndex < collectableNames.Length)
+                    {
+                        string selectedCollectable = collectableNames[selectedCollectableIndex];
+                        SetCollectableAmount(selectedCollectable, amount);
+                        showCollectableDropdown = false; // Close dropdown after action
+                    }
+                    else
+                    {
+                        ShowToast("Invalid amount or no item selected!");
+                    }
+                }
+                GUILayout.EndHorizontal();
+            }
+                else
+                {
+                    GUILayout.Label("No collectables found - enter game first", GUI.skin.label);
+                    if (GUILayout.Button("Refresh List", GUILayout.Width(100)))
+                    {
+                        collectablesScanned = false; // Force rescan
+                        ScanCollectables();
+                    }
+                }
+                
+                GUILayout.EndVertical();
+            }
+
+            GUILayout.Space(5);
+
+            // Crest Tools section
+            showCrestTools = DrawCollapsingHeader("Crest Tools", showCrestTools);
+            if (showCrestTools)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
+                
+                // Skills-only filter checkbox
+                GUILayout.BeginHorizontal();
+                bool newShowSkillsOnly = GUILayout.Toggle(showSkillsOnly, "Skills Only", GUILayout.Width(100));
+                if (newShowSkillsOnly != showSkillsOnly)
+                {
+                    showSkillsOnly = newShowSkillsOnly;
+                    selectedToolIndex = 0; // Reset selection
+                    FilterTools(); // Update filtered list
+                    
+                    // Reset cache since tool selection changed
+                    lastAmmoCheckToolIndex = -1;
+                    lastStorageCheckToolIndex = -1;
+                }
+                GUILayout.EndHorizontal();
+                
+                // Scan tools on first access
+                if (!toolsScanned)
+                {
+                    ScanTools();
+                }
+                
+                if (toolNames.Length > 0)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("Tool:", GUILayout.Width(80));
+                    
+                    // Dropdown button
+                    string currentSelection = selectedToolIndex < toolNames.Length ? toolNames[selectedToolIndex] : "Select Tool";
+                    
+                    if (GUILayout.Button($"{currentSelection} ▼", GUILayout.Width(180)))
+                    {
+                        showToolDropdown = !showToolDropdown;
+                        if (showToolDropdown)
+                        {
+                            toolSearchFilter = ""; // Reset search when opening
+                            FilterTools();
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+                    
+                    // Dropdown with search
+                    if (showToolDropdown)
+                    {
+                        GUILayout.BeginVertical(GUI.skin.box);
+                        
+                        // Search box
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label("Search:", GUILayout.Width(50));
+                        string newFilter = GUILayout.TextField(toolSearchFilter, GUILayout.Width(130));
+                        if (newFilter != toolSearchFilter)
+                        {
+                            toolSearchFilter = newFilter;
+                            FilterTools();
+                            toolDropdownScroll = Vector2.zero; // Reset scroll when filtering
+                        }
+                        GUILayout.EndHorizontal();
+                        
+                        // Clear search button
+                        if (!string.IsNullOrEmpty(toolSearchFilter))
+                        {
+                            if (GUILayout.Button("Clear", GUILayout.Width(60)))
+                            {
+                                toolSearchFilter = "";
+                                FilterTools();
+                            }
+                        }
+                        
+                        // Scrollable filtered list
+                        toolDropdownScroll = GUILayout.BeginScrollView(toolDropdownScroll, GUILayout.Height(150));
+                        
+                        if (filteredToolNames.Length > 0)
+                        {
+                            for (int i = 0; i < filteredToolNames.Length; i++)
+                            {
+                                string toolName = filteredToolNames[i];
+                                
+                                // Find the index in the original array
+                                int originalIndex = Array.IndexOf(toolNames, toolName);
+                                
+                                if (GUILayout.Button(toolName, GUI.skin.label))
+                                {
+                                    selectedToolIndex = originalIndex;
+                                    showToolDropdown = false;
+                                    toolSearchFilter = ""; // Clear search after selection
+                                }
+                            }
+                        }
+                        else
+                        {
+                            GUILayout.Label("No tools match search", GUI.skin.label);
+                        }
+                        
+                        GUILayout.EndScrollView();
+                        GUILayout.EndVertical();
+                    }
+                
+                    // Unlock control
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Unlock Selected Tool", GUILayout.Width(150)))
+                    {
+                        if (selectedToolIndex < toolNames.Length)
+                        {
+                            string selectedTool = toolNames[selectedToolIndex];
+                            UnlockSpecificTool(selectedTool);
+                            showToolDropdown = false; // Close dropdown after action
+                        }
+                        else
+                        {
+                            ShowToast("No tool selected!");
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+                    
+                    // Only show ammo-related controls if selected tool uses ammo
+                    if (SelectedToolUsesAmmo())
+                    {
+                        // Get current storage amount once
+                        int currentStorage = GetSelectedToolCurrentStorage();
+                        
+                        // Update storage amount field when tool selection changes
+                        if (lastSelectedToolIndex != selectedToolIndex)
+                        {
+                            if (currentStorage > 0)
+                            {
+                                toolStorageAmount = currentStorage.ToString();
+                            }
+                            lastSelectedToolIndex = selectedToolIndex;
+                        }
+                        
+                        // Storage amount control with current value display
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label($"Base Storage Amount (Current: {currentStorage}):", GUILayout.Width(200));
+                        toolStorageAmount = GUILayout.TextField(toolStorageAmount, GUILayout.Width(60));
+                        if (GUILayout.Button("Set", GUILayout.Width(50)))
+                        {
+                            if (int.TryParse(toolStorageAmount, out int amount) && selectedToolIndex < toolNames.Length)
+                            {
+                                string selectedTool = toolNames[selectedToolIndex];
+                                SetToolStorage(selectedTool, amount);
+                                showToolDropdown = false; // Close dropdown after action
+                            }
+                            else
+                            {
+                                ShowToast("Invalid amount or no tool selected!");
+                            }
+                        }
+                        GUILayout.EndHorizontal();
+                        
+                        // Refill ammo control
+                        GUILayout.BeginHorizontal();
+                        if (GUILayout.Button("Refill Ammo", GUILayout.Width(100)))
+                        {
+                            if (selectedToolIndex < toolNames.Length)
+                            {
+                                string selectedTool = toolNames[selectedToolIndex];
+                                RefillToolAmmo(selectedTool);
+                                showToolDropdown = false; // Close dropdown after action
+                            }
+                            else
+                            {
+                                ShowToast("No tool selected!");
+                            }
+                        }
+                        GUILayout.EndHorizontal();
+                    }
+                }
+                else
+                {
+                    GUILayout.Label("No tools found - enter game first", GUI.skin.label);
+                    if (GUILayout.Button("Refresh List", GUILayout.Width(100)))
+                    {
+                        toolsScanned = false; // Force rescan
+                        ScanTools();
+                    }
+                }
+                
+                GUILayout.EndVertical();
+            }
+
+            GUILayout.Space(5);
+
+            // Player Skills section
+            showPlayerSkills = DrawCollapsingHeader("Player Skills", showPlayerSkills);
+            if (showPlayerSkills)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
+                
+                // Two-column layout for better organization
+                GUILayout.BeginHorizontal();
+                
+                // Left Column (Movement Abilities)
+                GUILayout.BeginVertical();
+                if (GUILayout.Button("Unlock Double Jump", GUILayout.Width(170)))
+                {
+                    UnlockDoubleJump();
+                }
+                if (GUILayout.Button("Unlock Dash", GUILayout.Width(170)))
+                {
+                    UnlockDash();
+                }
+                if (GUILayout.Button("Unlock Wall Jump", GUILayout.Width(170)))
+                {
+                    UnlockWallJump();
+                }
+                if (GUILayout.Button("Unlock Glide", GUILayout.Width(170)))
+                {
+                    UnlockGlide();
+                }
+                GUILayout.EndVertical();
+                
+                GUILayout.Space(10);
+                
+                // Right Column (Special Abilities)
+                GUILayout.BeginVertical();
+                if (GUILayout.Button("Unlock Charge Attack", GUILayout.Width(170)))
+                {
+                    UnlockChargeAttack();
+                }
+                if (GUILayout.Button("Unlock Needolin", GUILayout.Width(170)))
+                {
+                    UnlockNeedolin();
+                }
+                if (GUILayout.Button("Unlock Grappling Hook", GUILayout.Width(170)))
+                {
+                    UnlockGrapplingHook();
+                }
+                GUILayout.EndVertical();
+                
+                GUILayout.EndHorizontal();
+                GUILayout.EndVertical();
+            }
+
+            GUILayout.Space(5);
+
+            // Quick Actions section
+            showQuickActions = DrawCollapsingHeader("Quick Actions", showQuickActions);
+            if (showQuickActions)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
             
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Refill Health"))
@@ -568,41 +2236,68 @@ namespace SilkSong
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Unlock Crests"))
             {
-                UnlockAllCrests();
-                ShowToast("All crests unlocked!");
+                ShowConfirmation("Unlock All Crests", 
+                    "This will unlock all crests. This action cannot be undone.", 
+                    () => {
+                        UnlockAllCrests();
+                        ShowToast("All crests unlocked!");
+                    });
             }
-            if (GUILayout.Button("Unlock Tools"))
+            if (GUILayout.Button("Unlock Crest Skills"))
             {
-                UnlockAllTools();
-                ShowToast("All tools unlocked!");
+                ShowConfirmation("Unlock All Crest Skills", 
+                    "This will unlock all crest skills. This action cannot be undone.", 
+                    () => {
+                        UnlockAllTools();
+                        ShowToast("All crest skills unlocked!");
+                    });
             }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Unlock Items"))
+            if (GUILayout.Button("Unlock Crest Tools"))
             {
-                UnlockAllItems();
-                ShowToast("All items unlocked!");
+                ShowConfirmation("Unlock All Crest Tools", 
+                    "This will unlock all crest tools. This action cannot be undone.", 
+                    () => {
+                        UnlockAllItems();
+                        ShowToast("All crest tools unlocked!");
+                    });
             }
             if (GUILayout.Button("Max Collectables"))
             {
-                MaxAllCollectables();
-                ShowToast("All collectables maxed!");
+                ShowConfirmation("Max All Collectables", 
+                    "This will maximize all collectible items. This action cannot be undone.", 
+                    () => {
+                        MaxAllCollectables();
+                        ShowToast("All collectables maxed!");
+                    });
             }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Unlock All Fast Travel Locations"))
             {
-                UnlockAllFastTravel();
-                ShowToast("All fast travel unlocked!");
+                ShowConfirmation("Unlock All Fast Travel", 
+                    "This will unlock all fast travel locations. This action cannot be undone.", 
+                    () => {
+                        UnlockAllFastTravel();
+                        ShowToast("All fast travel unlocked!");
+                    });
             }
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(10);
+                GUILayout.EndVertical();
+            }
 
-            // Keybind section
-            GUILayout.Label(isSettingKeybind ? "Press any key (ESC to cancel)" : "Keybind Settings", GUI.skin.box);
+            GUILayout.Space(5);
+
+            // Keybind Settings section
+            string keybindTitle = isSettingKeybind ? "Press any key (ESC to cancel)" : "Keybind Settings";
+            showKeybindSettings = DrawCollapsingHeader(keybindTitle, showKeybindSettings);
+            if (showKeybindSettings)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
             
             if (!isSettingKeybind)
             {
@@ -640,6 +2335,9 @@ namespace SilkSong
                     }
                     GUILayout.EndHorizontal();
                 }
+                }
+                
+                GUILayout.EndVertical();
             }
 
             GUILayout.EndScrollView();
@@ -743,6 +2441,7 @@ namespace SilkSong
 
             GUILayout.EndScrollView();
         }
+
 
 
 
@@ -1075,8 +2774,8 @@ namespace SilkSong
             currentKeybinds[4] = KeyCode.F5;   // Add Money
             currentKeybinds[5] = KeyCode.F6;   // Add Shards
             currentKeybinds[6] = KeyCode.F8;   // Unlock Crests
-            currentKeybinds[7] = KeyCode.F9;   // Unlock Tools
-            currentKeybinds[8] = KeyCode.F10;  // Unlock Items
+            currentKeybinds[7] = KeyCode.F9;   // Unlock Crest Skills
+            currentKeybinds[8] = KeyCode.F10;  // Unlock Crest Tools
             currentKeybinds[9] = KeyCode.F11;  // Max Collectables
             currentKeybinds[10] = KeyCode.F12; // Auto Silk
         }
@@ -1521,6 +3220,127 @@ namespace SilkSong
             catch (Exception e)
             {
                 MelonLogger.Msg($"Error unlocking items: {e.Message}");
+            }
+        }
+
+        private void SetCollectableAmount(string collectableDisplayName, int amount)
+        {
+            try
+            {
+                // Get the actual object name from the display name
+                string actualObjectName = "";
+                if (displayNameToObjectName.ContainsKey(collectableDisplayName))
+                {
+                    actualObjectName = displayNameToObjectName[collectableDisplayName];
+                }
+                else
+                {
+                    // Fallback: treat as object name if no mapping found
+                    actualObjectName = collectableDisplayName;
+                }
+                
+                // Find the CollectableItemBasic object
+                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(CollectableItemBasic));
+                
+                foreach (UnityEngine.Object obj in allObjects)
+                {
+                    if (obj == null) continue;
+                    
+                    // Check if this is the collectable we're looking for
+                    string objName = obj.name.Replace("(Clone)", "").Trim();
+                    if (objName == actualObjectName)
+                    {
+                        try
+                        {
+                            // Try using CollectableItemManager to set amount properly
+                            Type managerType = FindTypeInAssemblies("CollectableItemManager");
+                            if (managerType != null)
+                            {
+                                // Get the singleton instance using ManagerSingleton pattern
+                                Type managerSingletonType = FindTypeInAssemblies("ManagerSingleton`1");
+                                if (managerSingletonType != null)
+                                {
+                                    Type genericManagerType = managerSingletonType.MakeGenericType(managerType);
+                                    PropertyInfo instanceProperty = genericManagerType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
+                                    
+                                    if (instanceProperty != null)
+                                    {
+                                        object managerInstance = instanceProperty.GetValue(null);
+                                        if (managerInstance != null)
+                                        {
+                                            // Get the internal methods for precise control
+                                            MethodInfo removeItemMethod = managerType.GetMethod("InternalRemoveItem", BindingFlags.NonPublic | BindingFlags.Instance);
+                                            MethodInfo addItemMethod = managerType.GetMethod("InternalAddItem", BindingFlags.NonPublic | BindingFlags.Instance);
+                                            
+                                            if (removeItemMethod != null && addItemMethod != null)
+                                            {
+                                                // First, remove a large amount to clear current inventory (the method has bounds checking)
+                                                removeItemMethod.Invoke(managerInstance, new object[] { obj, 9999 });
+                                                
+                                                // Then add the exact amount we want
+                                                if (amount > 0)
+                                                {
+                                                    addItemMethod.Invoke(managerInstance, new object[] { obj, amount });
+                                                }
+                                                
+                                                ShowToast($"Set {collectableDisplayName} to {amount}");
+                                                return;
+                                            }
+                                            else
+                                            {
+                                                // Fallback to public AddItem method (will add to current)
+                                                MethodInfo publicAddItemMethod = managerType.GetMethod("AddItem", BindingFlags.Public | BindingFlags.Static);
+                                                if (publicAddItemMethod != null)
+                                                {
+                                                    publicAddItemMethod.Invoke(null, new object[] { obj, amount });
+                                                    ShowToast($"Added {amount} {collectableDisplayName} (note: adds to current amount)");
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Direct reflection fallback if manager approach fails
+                            Type itemType = obj.GetType();
+                            
+                            // Try to directly set the amount field
+                            FieldInfo currentAmountField = itemType.GetField("currentAmount", BindingFlags.NonPublic | BindingFlags.Instance);
+                            if (currentAmountField == null)
+                            {
+                                currentAmountField = itemType.GetField("amount", BindingFlags.NonPublic | BindingFlags.Instance);
+                            }
+                            
+                            if (currentAmountField != null && currentAmountField.FieldType == typeof(int))
+                            {
+                                currentAmountField.SetValue(obj, amount);
+                                ShowToast($"Set {collectableDisplayName} to {amount} (direct field access)");
+                                return;
+                            }
+                            
+                            // Try property
+                            PropertyInfo amountProperty = itemType.GetProperty("amount", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                            if (amountProperty != null && amountProperty.PropertyType == typeof(int) && amountProperty.CanWrite)
+                            {
+                                amountProperty.SetValue(obj, amount);
+                                ShowToast($"Set {collectableDisplayName} to {amount} (direct property access)");
+                                return;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            MelonLogger.Msg($"Error setting amount for {obj.name}: {e.Message}");
+                        }
+                    }
+                }
+                
+                ShowToast($"Could not find or set amount for {collectableDisplayName}");
+            }
+            catch (Exception e)
+            {
+                ShowToast($"Error setting {collectableDisplayName}: {e.Message}");
+                MelonLogger.Msg($"Error setting collectable amount: {e.Message}");
             }
         }
 
