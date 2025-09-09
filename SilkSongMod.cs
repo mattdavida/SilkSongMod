@@ -67,6 +67,26 @@ namespace SilkSong
         // Always Active Tools system
         private List<string> alwaysActiveTools = new List<string>();
         private bool showAlwaysActiveTools = false;
+        private bool compassActive = false;
+        private bool magnetiteBroochActive = false;
+        
+        // Extended Yellow Tools (Navigation & Support)
+        private bool shardPendantActive = false;
+        private bool weightedBeltActive = false;
+        private bool barbedBraceletActive = false;
+        private bool deadBugsPurseActive = false;
+        private bool shellSatchelActive = false;
+        private bool magnetiteDiceActive = false;
+        private bool scuttlebraceActive = false;
+        private bool ascendantsGripActive = false;
+        private bool spiderStringsActive = false;
+        private bool silkspeedAnkletsActive = false;
+        private bool thiefsMarkActive = false;
+        private bool longclawActive = false;
+        private bool pinBadgeActive = false;
+        private bool quickSlingActive = false;
+        private bool weavelightActive = false;
+        private bool wardingBellActive = false;
 
         // Achievement system
         private bool achievementsScanned = false;
@@ -1137,76 +1157,6 @@ namespace SilkSong
             }
         }
 
-        private void UnlockCompass()
-        {
-            try
-            {
-                // Unlock via PlayerData - compass functionality
-                SetPlayerDataBool("hasCompass", true);
-                MelonLogger.Msg("Compass unlocked via PlayerData");
-            }
-            catch (Exception e)
-            {
-                MelonLogger.Msg($"Error unlocking Compass: {e.Message}");
-            }
-        }
-
-        private void UnlockMagnetiteBrooch()
-        {
-            try
-            {
-                // Unlock via PlayerData - magnetite brooch functionality  
-                SetPlayerDataBool("hasMagnetiteBrooch", true);
-                MelonLogger.Msg("Magnetite Brooch unlocked via PlayerData");
-            }
-            catch (Exception e)
-            {
-                MelonLogger.Msg($"Error unlocking Magnetite Brooch: {e.Message}");
-            }
-        }
-        private void AddAlwaysActiveTool(string displayName)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(displayName))
-                {
-                    ShowToast("Invalid tool name");
-                    return;
-                }
-
-                // Convert display name to object name for the game's tool system  
-                string objectName = displayName;
-                if (displayName == "Compass")
-                {
-                    objectName = "Compass";
-                }
-                else if (displayName == "Magnetite Brooch")
-                {
-                    objectName = "Rosary Magnet";
-                }
-                else
-                {
-                    objectName = displayName.Replace(" ", "");
-                }
-
-                if (alwaysActiveTools.Contains(objectName))
-                {
-                    ShowToast($"{displayName} is already active");
-                    return;
-                }
-
-                alwaysActiveTools.Add(objectName);
-                ApplyAlwaysActiveTools();
-                ShowToast($"Added {displayName} to always active tools");
-                MelonLogger.Msg($"Added {displayName} ({objectName}) to always active tools");
-
-            }
-            catch (Exception e)
-            {
-                ShowToast($"Error adding tool: {e.Message}");
-                MelonLogger.Msg($"Error in AddAlwaysActiveTool: {e.Message}");
-            }
-        }
         private void UnlockAllMapItems()
         {
             try
@@ -1242,6 +1192,438 @@ namespace SilkSong
                 MelonLogger.Msg($"Error in UnlockAllMapItems: {e.Message}");
             }
         }
+
+        private void ToggleCompass()
+        {
+            compassActive = !compassActive;
+            
+            if (compassActive)
+            {
+                if (!alwaysActiveTools.Contains("Compass"))
+                {
+                    alwaysActiveTools.Add("Compass");
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Compass enabled!");
+                MelonLogger.Msg("Compass enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove("Compass");
+                ApplyAlwaysActiveTools();
+                ShowToast("Compass disabled!");
+                MelonLogger.Msg("Compass disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleMagnetiteBrooch()
+        {
+            magnetiteBroochActive = !magnetiteBroochActive;
+            
+            if (magnetiteBroochActive)
+            {
+                if (!alwaysActiveTools.Contains("Rosary Magnet"))
+                {
+                    alwaysActiveTools.Add("Rosary Magnet");
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Magnetite Brooch enabled!");
+                MelonLogger.Msg("Magnetite Brooch enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove("Rosary Magnet");
+                ApplyAlwaysActiveTools();
+                ShowToast("Magnetite Brooch disabled!");
+                MelonLogger.Msg("Magnetite Brooch disabled - removed from always active tools");
+            }
+        }
+
+        // Extended Yellow Tools Toggle Methods
+        private void ToggleShardPendant()
+        {
+            shardPendantActive = !shardPendantActive;
+            string toolName = "Bone Necklace"; // Internal object name from research
+            
+            if (shardPendantActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Shard Pendant enabled!");
+                MelonLogger.Msg("Shard Pendant enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Shard Pendant disabled!");
+                MelonLogger.Msg("Shard Pendant disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleWeightedBelt()
+        {
+            weightedBeltActive = !weightedBeltActive;
+            string toolName = "Weighted Anklet"; // Internal object name from research
+            
+            if (weightedBeltActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Weighted Belt enabled!");
+                MelonLogger.Msg("Weighted Belt enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Weighted Belt disabled!");
+                MelonLogger.Msg("Weighted Belt disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleBarbedBracelet()
+        {
+            barbedBraceletActive = !barbedBraceletActive;
+            string toolName = "Barbed Wire"; // Internal object name from research
+            
+            if (barbedBraceletActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Barbed Bracelet enabled!");
+                MelonLogger.Msg("Barbed Bracelet enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Barbed Bracelet disabled!");
+                MelonLogger.Msg("Barbed Bracelet disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleDeadBugsPurse()
+        {
+            deadBugsPurseActive = !deadBugsPurseActive;
+            string toolName = "Dead Mans Purse"; // Internal object name from research
+            
+            if (deadBugsPurseActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Dead Bug's Purse enabled!");
+                MelonLogger.Msg("Dead Bug's Purse enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Dead Bug's Purse disabled!");
+                MelonLogger.Msg("Dead Bug's Purse disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleShellSatchel()
+        {
+            shellSatchelActive = !shellSatchelActive;
+            string toolName = "Shell Satchel"; // Internal object name from research
+            
+            if (shellSatchelActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Shell Satchel enabled!");
+                MelonLogger.Msg("Shell Satchel enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Shell Satchel disabled!");
+                MelonLogger.Msg("Shell Satchel disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleMagnetiteDice()
+        {
+            magnetiteDiceActive = !magnetiteDiceActive;
+            string toolName = "Magnetite Dice"; // Internal object name from research
+            
+            if (magnetiteDiceActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Magnetite Dice enabled!");
+                MelonLogger.Msg("Magnetite Dice enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Magnetite Dice disabled!");
+                MelonLogger.Msg("Magnetite Dice disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleScuttlebrace()
+        {
+            scuttlebraceActive = !scuttlebraceActive;
+            string toolName = "Scuttlebrace"; // Internal object name from research
+            
+            if (scuttlebraceActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Scuttlebrace enabled!");
+                MelonLogger.Msg("Scuttlebrace enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Scuttlebrace disabled!");
+                MelonLogger.Msg("Scuttlebrace disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleAscendantsGrip()
+        {
+            ascendantsGripActive = !ascendantsGripActive;
+            string toolName = "Wallcling"; // Internal object name from research
+            
+            if (ascendantsGripActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Ascendant's Grip enabled!");
+                MelonLogger.Msg("Ascendant's Grip enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Ascendant's Grip disabled!");
+                MelonLogger.Msg("Ascendant's Grip disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleSpiderStrings()
+        {
+            spiderStringsActive = !spiderStringsActive;
+            string toolName = "Musician Charm"; // Internal object name from research
+            
+            if (spiderStringsActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Spider Strings enabled!");
+                MelonLogger.Msg("Spider Strings enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Spider Strings disabled!");
+                MelonLogger.Msg("Spider Strings disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleSilkspeedAnklets()
+        {
+            silkspeedAnkletsActive = !silkspeedAnkletsActive;
+            string toolName = "Sprintmaster"; // Internal object name from research
+            
+            if (silkspeedAnkletsActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Silkspeed Anklets enabled!");
+                MelonLogger.Msg("Silkspeed Anklets enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Silkspeed Anklets disabled!");
+                MelonLogger.Msg("Silkspeed Anklets disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleThiefsMark()
+        {
+            thiefsMarkActive = !thiefsMarkActive;
+            string toolName = "Thief Charm"; // Internal object name from research
+            
+            if (thiefsMarkActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Thief's Mark enabled!");
+                MelonLogger.Msg("Thief's Mark enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Thief's Mark disabled!");
+                MelonLogger.Msg("Thief's Mark disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleLongclaw()
+        {
+            longclawActive = !longclawActive;
+            string toolName = "Longneedle"; // Internal object name from research
+            
+            if (longclawActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Longclaw enabled!");
+                MelonLogger.Msg("Longclaw enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Longclaw disabled!");
+                MelonLogger.Msg("Longclaw disabled - removed from always active tools");
+            }
+        }
+
+        private void TogglePinBadge()
+        {
+            pinBadgeActive = !pinBadgeActive;
+            string toolName = "Pinstress Tool"; // Internal object name from research
+            
+            if (pinBadgeActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Pin Badge enabled!");
+                MelonLogger.Msg("Pin Badge enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Pin Badge disabled!");
+                MelonLogger.Msg("Pin Badge disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleQuickSling()
+        {
+            quickSlingActive = !quickSlingActive;
+            string toolName = "Quick Sling"; // Internal object name from research
+            
+            if (quickSlingActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Quick Sling enabled!");
+                MelonLogger.Msg("Quick Sling enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Quick Sling disabled!");
+                MelonLogger.Msg("Quick Sling disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleWeavelight()
+        {
+            weavelightActive = !weavelightActive;
+            string toolName = "White Ring"; // Internal object name from research
+            
+            if (weavelightActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Weavelight enabled!");
+                MelonLogger.Msg("Weavelight enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Weavelight disabled!");
+                MelonLogger.Msg("Weavelight disabled - removed from always active tools");
+            }
+        }
+
+        private void ToggleWardingBell()
+        {
+            wardingBellActive = !wardingBellActive;
+            string toolName = "Bell Bind"; // Internal object name from research
+            
+            if (wardingBellActive)
+            {
+                if (!alwaysActiveTools.Contains(toolName))
+                {
+                    alwaysActiveTools.Add(toolName);
+                    ApplyAlwaysActiveTools();
+                }
+                ShowToast("Warding Bell enabled!");
+                MelonLogger.Msg("Warding Bell enabled via always active tools");
+            }
+            else
+            {
+                alwaysActiveTools.Remove(toolName);
+                ApplyAlwaysActiveTools();
+                ShowToast("Warding Bell disabled!");
+                MelonLogger.Msg("Warding Bell disabled - removed from always active tools");
+            }
+        }
+
         private void ApplyAlwaysActiveTools()
         {
             try
@@ -1275,7 +1657,6 @@ namespace SilkSong
 
                     setExtraEquippedToolMethod.Invoke(null, new object[] { slotId, toolName });
                     MelonLogger.Msg($"Applied always active tool: {toolName} to slot {slotId}");
-
                 }
 
                 MelonLogger.Msg($"Applied {alwaysActiveTools.Count} always active tools");
@@ -1319,6 +1700,93 @@ namespace SilkSong
             catch (Exception e)
             {
                 MelonLogger.Msg($"Error in ClearAlwaysActiveTools: {e.Message}");
+            }
+        }
+
+        private void ResearchToolItemBasics()
+        {
+            try
+            {
+                MelonLogger.Msg("=== RESEARCHING TOOLITEMBASIC OBJECTS ===");
+                
+                // Find all ToolItemBasic objects
+                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
+                MelonLogger.Msg($"Found {allObjects.Length} ToolItemBasic objects total");
+
+                List<string> zeroStorageTools = new List<string>();
+                List<string> nonZeroStorageTools = new List<string>();
+                
+                foreach (UnityEngine.Object obj in allObjects)
+                {
+                    if (obj == null) continue;
+
+                    try
+                    {
+                        string displayName = GetToolDisplayName(obj);
+                        string objectName = obj.name.Replace("(Clone)", "").Trim();
+                        
+                        // Get baseStorageAmount field
+                        FieldInfo baseStorageField = null;
+                        Type currentType = obj.GetType();
+
+                        while (currentType != null && baseStorageField == null)
+                        {
+                            baseStorageField = currentType.GetField("baseStorageAmount",
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                            currentType = currentType.BaseType;
+                        }
+
+                        if (baseStorageField != null)
+                        {
+                            int storageAmount = (int)baseStorageField.GetValue(obj);
+                            
+                            if (storageAmount == 0)
+                            {
+                                zeroStorageTools.Add($"{displayName} ({objectName})");
+                                MelonLogger.Msg($"  ZERO STORAGE: {displayName} ({objectName})");
+                            }
+                            else
+                            {
+                                nonZeroStorageTools.Add($"{displayName} ({objectName}) - Storage: {storageAmount}");
+                            }
+                        }
+                        else
+                        {
+                            MelonLogger.Msg($"  NO STORAGE FIELD: {displayName} ({objectName})");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        MelonLogger.Msg($"Error processing {obj.name}: {e.Message}");
+                    }
+                }
+
+                MelonLogger.Msg($"\n=== RESEARCH SUMMARY ===");
+                MelonLogger.Msg($"Total ToolItemBasic objects: {allObjects.Length}");
+                MelonLogger.Msg($"Zero storage (always-active candidates): {zeroStorageTools.Count}");
+                MelonLogger.Msg($"Non-zero storage (consumable tools): {nonZeroStorageTools.Count}");
+
+                MelonLogger.Msg($"\n=== ZERO STORAGE TOOLS (Always-Active Candidates) ===");
+                foreach (string tool in zeroStorageTools)
+                {
+                    MelonLogger.Msg($"  • {tool}");
+                }
+
+                if (zeroStorageTools.Count <= 20)
+                {
+                    MelonLogger.Msg($"\n✅ Good news: {zeroStorageTools.Count} zero-storage tools fits within the 20-slot SetExtraEquippedTool limit!");
+                }
+                else
+                {
+                    MelonLogger.Msg($"\n⚠️  Warning: {zeroStorageTools.Count} zero-storage tools exceeds the 20-slot limit. We'll need to prioritize.");
+                }
+
+                ShowToast($"Research complete: {zeroStorageTools.Count} always-active candidates found");
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Msg($"Error in ResearchToolItemBasics: {e.Message}");
+                ShowToast($"Research failed: {e.Message}");
             }
         }
 
@@ -1672,6 +2140,7 @@ namespace SilkSong
             bool harpoonDashSet = GetPlayerDataBool("hasHarpoonDash", false);
             return superJumpSet && harpoonDashSet;
         }
+
 
         // Toggle methods for skills
         private void ToggleDoubleJump()
@@ -2695,21 +3164,181 @@ namespace SilkSong
             GUILayout.Space(5);
 
             // Always Active Tools section
-            showAlwaysActiveTools = DrawCollapsingHeader($"Always Active Tools ({alwaysActiveTools.Count} active)", showAlwaysActiveTools);
+            showAlwaysActiveTools = DrawCollapsingHeader("Always Active Tools", showAlwaysActiveTools);
             if (showAlwaysActiveTools)
             {
                 GUILayout.BeginVertical(GUI.skin.box);
+            
+                // Compass and Magnetite Brooch (top priority tools)
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = compassActive ? Color.green : Color.white;
+                if (GUILayout.Button("Compass"))
+                {
+                    ToggleCompass();
+                }
+                GUI.backgroundColor = magnetiteBroochActive ? Color.green : Color.white;
+                if (GUILayout.Button("Magnetite Brooch"))
+                {
+                    ToggleMagnetiteBrooch();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
 
-                GUILayout.Label("Tools that are always equipped (invisible but functional):");
+                // Shard Pendant and Ascendant's Grip
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = shardPendantActive ? Color.green : Color.white;
+                if (GUILayout.Button("Shard Pendant"))
+                {
+                    ToggleShardPendant();
+                }
+                GUI.backgroundColor = ascendantsGripActive ? Color.green : Color.white;
+                if (GUILayout.Button("Ascendant's Grip"))
+                {
+                    ToggleAscendantsGrip();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
 
-                // Hardcoded popular tools section
-                GUILayout.Label("📍 Popular Tools (Always Active):", GUI.skin.label);
-                GUILayout.BeginVertical(GUI.skin.box);
-                GUILayout.Label("• Compass (navigation)");
-                GUILayout.Label("• Magnetite Brooch (collection)");
-                GUILayout.Label("These tools are hardcoded for convenience and cannot be removed.");
-                GUILayout.EndVertical();
+                // Dead Bug's Purse and Shell Satchel
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = deadBugsPurseActive ? Color.green : Color.white;
+                if (GUILayout.Button("Dead Bug's Purse"))
+                {
+                    ToggleDeadBugsPurse();
+                }
+                GUI.backgroundColor = shellSatchelActive ? Color.green : Color.white;
+                if (GUILayout.Button("Shell Satchel"))
+                {
+                    ToggleShellSatchel();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
 
+                // Weighted Belt and Silkspeed Anklets
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = weightedBeltActive ? Color.green : Color.white;
+                if (GUILayout.Button("Weighted Belt"))
+                {
+                    ToggleWeightedBelt();
+                }
+                GUI.backgroundColor = silkspeedAnkletsActive ? Color.green : Color.white;
+                if (GUILayout.Button("Silkspeed Anklets"))
+                {
+                    ToggleSilkspeedAnklets();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
+
+                // Spider Strings and Scuttlebrace
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = spiderStringsActive ? Color.green : Color.white;
+                if (GUILayout.Button("Spider Strings"))
+                {
+                    ToggleSpiderStrings();
+                }
+                GUI.backgroundColor = scuttlebraceActive ? Color.green : Color.white;
+                if (GUILayout.Button("Scuttlebrace"))
+                {
+                    ToggleScuttlebrace();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
+
+                // Barbed Bracelet and Thief's Mark
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = barbedBraceletActive ? Color.green : Color.white;
+                if (GUILayout.Button("Barbed Bracelet"))
+                {
+                    ToggleBarbedBracelet();
+                }
+                GUI.backgroundColor = thiefsMarkActive ? Color.green : Color.white;
+                if (GUILayout.Button("Thief's Mark"))
+                {
+                    ToggleThiefsMark();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
+
+                // Magnetite Dice and Longclaw
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = magnetiteDiceActive ? Color.green : Color.white;
+                if (GUILayout.Button("Magnetite Dice"))
+                {
+                    ToggleMagnetiteDice();
+                }
+                GUI.backgroundColor = longclawActive ? Color.green : Color.white;
+                if (GUILayout.Button("Longclaw"))
+                {
+                    ToggleLongclaw();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
+
+                // Pin Badge and Quick Sling
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = pinBadgeActive ? Color.green : Color.white;
+                if (GUILayout.Button("Pin Badge"))
+                {
+                    TogglePinBadge();
+                }
+                GUI.backgroundColor = quickSlingActive ? Color.green : Color.white;
+                if (GUILayout.Button("Quick Sling"))
+                {
+                    ToggleQuickSling();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
+
+                // Weavelight and Warding Bell
+                GUILayout.BeginHorizontal();
+                GUI.backgroundColor = weavelightActive ? Color.green : Color.white;
+                if (GUILayout.Button("Weavelight"))
+                {
+                    ToggleWeavelight();
+                }
+                GUI.backgroundColor = wardingBellActive ? Color.green : Color.white;
+                if (GUILayout.Button("Warding Bell"))
+                {
+                    ToggleWardingBell();
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.EndHorizontal();
+
+                // Clear All button (centered)
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Clear All"))
+                {
+                    ShowConfirmation("Clear All Tools", 
+                        "This will disable all always-active tools. Are you sure?", 
+                        () =>
+                        {
+                            // Reset all tool states
+                            compassActive = false;
+                            magnetiteBroochActive = false;
+                            shardPendantActive = false;
+                            weightedBeltActive = false;
+                            barbedBraceletActive = false;
+                            deadBugsPurseActive = false;
+                            shellSatchelActive = false;
+                            magnetiteDiceActive = false;
+                            scuttlebraceActive = false;
+                            ascendantsGripActive = false;
+                            spiderStringsActive = false;
+                            silkspeedAnkletsActive = false;
+                            thiefsMarkActive = false;
+                            longclawActive = false;
+                            pinBadgeActive = false;
+                            quickSlingActive = false;
+                            weavelightActive = false;
+                            wardingBellActive = false;
+                            
+                            // Clear the tools list and apply
+                            alwaysActiveTools.Clear();
+                            ApplyAlwaysActiveTools();
+                            ShowToast("All always-active tools disabled");
+                        });
+                }
+                GUILayout.EndHorizontal();
 
                 GUILayout.EndVertical();
             }
@@ -4044,26 +4673,41 @@ namespace SilkSong
             try
             {
                 Type playerDataType = FindTypeInAssemblies("PlayerData");
-                if (playerDataType == null) return false;
+                if (playerDataType == null) 
+                {
+                    MelonLogger.Msg($"SetPlayerDataBool({boolName}): PlayerData type not found");
+                    return false;
+                }
 
                 PropertyInfo instanceProperty = playerDataType.GetProperty("instance", BindingFlags.Public | BindingFlags.Static);
-                if (instanceProperty == null) return false;
+                if (instanceProperty == null) 
+                {
+                    MelonLogger.Msg($"SetPlayerDataBool({boolName}): instance property not found");
+                    return false;
+                }
 
                 object playerDataInstance = instanceProperty.GetValue(null);
-                if (playerDataInstance == null) return false;
+                if (playerDataInstance == null) 
+                {
+                    MelonLogger.Msg($"SetPlayerDataBool({boolName}): PlayerData instance is null");
+                    return false;
+                }
 
                 // Try to set the field directly
                 FieldInfo field = playerDataType.GetField(boolName, BindingFlags.Public | BindingFlags.Instance);
                 if (field != null && field.FieldType == typeof(bool))
                 {
                     field.SetValue(playerDataInstance, value);
+                    MelonLogger.Msg($"SetPlayerDataBool({boolName}): Successfully set to {value}");
                     return true;
                 }
 
+                MelonLogger.Msg($"SetPlayerDataBool({boolName}): Field not found or not bool type");
                 return false;
             }
-            catch
+            catch (Exception ex)
             {
+                MelonLogger.Msg($"SetPlayerDataBool({boolName}): Exception: {ex.Message}");
                 return false;
             }
         }
@@ -4075,26 +4719,49 @@ namespace SilkSong
                 // Initialize infinite air jump state from PlayerData
                 bool playerDataInfiniteAirJump = GetPlayerDataBool("infiniteAirJump", false);
                 infiniteAirJumpEnabled = playerDataInfiniteAirJump;
-
+                
                 if (infiniteAirJumpEnabled)
                 {
                     MelonLogger.Msg("Infinite Air Jump found enabled in PlayerData - syncing toggle state");
                 }
-
-                // Auto-equip popular tools (hardcoded - most players always want these)
-                MelonLogger.Msg("Auto-unlocking and equipping popular tools (Compass, Magnetite Brooch)");
-                UnlockCompass();
-                UnlockMagnetiteBrooch();
-                AddAlwaysActiveTool("Compass");
-                AddAlwaysActiveTool("Magnetite Brooch");
-
-                // TODO: Add other persistent PlayerData toggles here if needed in the future
+                
+                // Initialize compass and magnetite brooch as enabled by default (most popular Yellow Tools)
+                // Only enable the most essential navigation/collection tools by default
+                compassActive = true;
+                magnetiteBroochActive = true;
+                
+                // Reset all other Yellow Tools to false (user can enable as needed)
+                shardPendantActive = false;
+                weightedBeltActive = false;
+                barbedBraceletActive = false;
+                deadBugsPurseActive = false;
+                shellSatchelActive = false;
+                magnetiteDiceActive = false;
+                scuttlebraceActive = false;
+                ascendantsGripActive = false;
+                spiderStringsActive = false;
+                silkspeedAnkletsActive = false;
+                thiefsMarkActive = false;
+                longclawActive = false;
+                pinBadgeActive = false;
+                quickSlingActive = false;
+                weavelightActive = false;
+                wardingBellActive = false;
+                
+                // Clear any existing tools and add defaults
+                alwaysActiveTools.Clear();
+                alwaysActiveTools.Add("Compass");
+                alwaysActiveTools.Add("Rosary Magnet");
+                
+                ApplyAlwaysActiveTools();
+                MelonLogger.Msg("Initialized default Yellow Tools (Compass + Magnetite Brooch) - 16 additional tools available for manual activation");
             }
             catch (Exception e)
             {
                 MelonLogger.Msg($"Error initializing state from PlayerData: {e.Message}");
             }
         }
+
 
 
         private bool GetPlayerDataBool(string boolName, bool defaultValue = false)

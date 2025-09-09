@@ -19,7 +19,7 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 - 🛡️ **Invincibility Modes** - Full invincibility or prevent death only options
 - ⚡ **Game Speed Control** - Configurable speed multipliers for time manipulation
 - 🎒 **Equipment Freedom** - Change equipment anywhere, bypass location restrictions
-- 🧭 **Always-On Navigation** - Permanent compass and magnetite brooch effects
+- 🧭 **18 Always-Active Yellow Tools** - Complete passive exploration/support system with toggle control
 - 🗺️ **Complete Map Unlock** - Reveal all areas instantly
 - 🏆 **Steam Achievement System** - Award individual or all achievements with search
 
@@ -47,11 +47,36 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Invincibility** | Full invincible or prevent death modes | ✅ Button toggle |
 | **Game Speed** | Configurable speed multiplier control | ✅ Input + Set |
 
-#### 🧭 Always Active Tools
-| Feature | Function | Type |
-|---------|----------|------|
-| **Compass (Navigation)** | Permanent player position on map | 🔄 Always Active |
-| **Magnetite Brooch (Collection)** | Automatic rosary/shard magnetism | 🔄 Always Active |
+#### 🧭 Always Active Tools (Yellow Tools System)
+**18 Yellow Tools** - Passive exploration and support benefits
+
+**Available Tools:**
+- **Compass** - Map position display (default enabled)
+- **Magnetite Brooch** - Automatic rosary/shard magnetism (default enabled)
+- **Shard Pendant** - Shard collection bonuses
+- **Ascendant's Grip** - Wall clinging ability
+- **Dead Bug's Purse** - Rosary storage upgrades
+- **Shell Satchel** - Item storage enhancements
+- **Weighted Belt** - Movement physics modifications
+- **Silkspeed Anklets** - Speed boost effects
+- **Spider Strings** - Traversal enhancements
+- **Scuttlebrace** - Movement assistance
+- **Barbed Bracelet** - Combat bonuses
+- **Thief's Mark** - Stealth benefits
+- **Magnetite Dice** - Utility effects
+- **Longclaw** - Extended reach benefits
+- **Pin Badge** - Special utility functions
+- **Quick Sling** - Rapid deployment tools
+- **Weavelight** - Illumination effects
+- **Warding Bell** - Protective benefits
+
+**Features:**
+- ✅ **Toggle System** - Enable/disable any combination of 18 Yellow Tools
+- 🎯 **Smart Defaults** - Compass and Magnetite Brooch active by default (most popular)
+- 🔄 **Real-time Application** - Uses game's `SetExtraEquippedTool` system for instant effects
+- 🎨 **Visual Feedback** - Green highlighting shows active tools
+- 🧹 **Bulk Management** - Clear All button with confirmation modal
+- 📊 **Slot Optimization** - All 18 tools fit within the game's 20-slot limit
 
 #### 📦 Collectible Items
 | Feature | Function | Type |
@@ -209,8 +234,10 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 
 ### vs Other Cheat Mods:
 - **Professional Interface** vs console commands
-- **Complete Customization** vs fixed hotkeys  
+- **18 Always-Active Yellow Tools** vs basic single-tool mods  
+- **Complete Customization** vs fixed hotkeys
 - **Balance Options** vs only god-mode cheats
+- **Research-Based Tool System** vs guesswork implementations
 - **Visual Feedback** vs silent operations
 - **Accident Prevention** vs permanent mistakes
 - **Universal Compatibility** vs keyboard-specific limitations
