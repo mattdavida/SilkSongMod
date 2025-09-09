@@ -37,8 +37,6 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Game Speed Control** | Adjustable game speed with configurable multiplier | ✅ Toggle |
 | **Change Equipment Anywhere** | Modify equipment outside of designated areas | ✅ Toggle |
 | **Player Skills Toggle** | Enable/disable all player skills + super jump | ✅ Toggle |
-| **Always Active Compass** | Permanent compass and magnetite brooch effects | ✅ Toggle |
-| **Unlock All Maps** | Reveal all map areas instantly | ✅ Toggle |
 
 #### 📊 Action Amounts
 | Feature | Function | Customizable |
@@ -46,6 +44,14 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Health System** | Add/remove health with custom amounts | ✅ Input field |
 | **Max Health** | Set exact max health (1-9999) with confirmation | ✅ Input + Modal |
 | **Currency** | Add money and shards | ✅ Input fields |
+| **Invincibility** | Full invincible or prevent death modes | ✅ Button toggle |
+| **Game Speed** | Configurable speed multiplier control | ✅ Input + Set |
+
+#### 🧭 Always Active Tools
+| Feature | Function | Type |
+|---------|----------|------|
+| **Compass (Navigation)** | Permanent player position on map | 🔄 Always Active |
+| **Magnetite Brooch (Collection)** | Automatic rosary/shard magnetism | 🔄 Always Active |
 
 #### 📦 Collectible Items
 | Feature | Function | Type |
@@ -57,7 +63,7 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 #### 🛠️ Crest Tools
 | Feature | Function | Advanced |
 |---------|----------|----------|
-| **Smart Tool Detection** | Auto-scans ToolItemBasic and ToolItemSkill objects | 🤖 AI-powered |
+| **Smart Tool Detection** | Auto-scans ToolItemBasic and ToolItemSkill objects | 🔍 Reflection-based |
 | **Skills Only Filter** | Toggle to show only skill-based tools | ✅ Filter |
 | **Ammo Intelligence** | Conditional UI for tools that use ammunition | 🎯 Smart UI |
 | **Display Name Mapping** | Uses proper localized tool names | 🌐 i18n |
@@ -72,6 +78,7 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Needolin** | Unlock musical instrument ability | ✅ PlayerData + Config |
 | **Glide/Umbrella** | Unlock gliding ability | ✅ PlayerData + Config |
 | **Grappling Hook** | Unlock harpoon dash ability | ✅ PlayerData + Config |
+| **Super Jump** | Enhanced jumping ability beyond normal limits | ✅ PlayerData + Config |
 
 #### 🏆 Steam Achievements
 | Feature | Function | Type |
@@ -79,7 +86,7 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Achievement Browser** | Searchable dropdown of all available achievements | 🔍 Dynamic |
 | **Individual Awards** | Award specific achievements instantly | ✅ Single-click |
 | **Award All** | Unlock all Steam/platform achievements at once | 🛡️ Confirmation Modal |
-| **Smart Detection** | Auto-scans available achievements from game data | 🤖 AI-powered |
+| **Smart Detection** | Auto-scans available achievements from game data | 🔍 Reflection-based |
 
 #### ⚡ Quick Actions
 | Action | Function | Safety |
@@ -91,23 +98,26 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Unlock All Crest Tools** | Unlock all tool-based crests | 🛡️ Confirmation Modal |
 | **Max All Collectables** | Set all collectables to maximum | 🛡️ Confirmation Modal |
 | **Unlock All Fast Travel** | Unlock all 10+ fast travel locations | 🛡️ Confirmation Modal |
+| **Unlock All Maps** | Reveal all map areas instantly | 🛡️ Confirmation Modal |
 | **Award All Achievements** | Unlock all 52 Steam/platform achievements | 🛡️ Confirmation Modal |
 
 ### Hotkeys (Fully Customizable)
 
-| Key | Default Function | Notes |
-|-----|------------------|-------|
-| **F1** | Add Health | Custom amount via GUI |
-| **F2** | Set Health | Set exact max health + refill |
-| **F3** | Refill Health | Instant full restore |
-| **F4** | One Hit Kill | Toggle massive damage |
-| **F5** | Add Money | Custom amount via GUI |
-| **F6** | Add Shards | Custom amount via GUI |
-| **F8** | Unlock All Crests | Instant unlock |
-| **F9** | Unlock All Tools | Instant unlock |
-| **F10** | Unlock All Items | Instant unlock |
-| **F11** | Max All Collectables | Set to 99 each |
-| **F12** | Auto Silk Refill | Toggle 2-second timer |
+**Note:** All hotkeys are **disabled by default** for safety. Enable and customize them through the GUI.
+
+| Function | Customizable Hotkey | Notes |
+|----------|-------------------|-------|
+| **Add Health** | Set your own key | Custom amount via GUI |
+| **Set Health** | Set your own key | Set exact max health + refill |
+| **Refill Health** | Set your own key | Instant full restore |
+| **One Hit Kill** | Set your own key | Toggle massive damage |
+| **Add Money** | Set your own key | Custom amount via GUI |
+| **Add Shards** | Set your own key | Custom amount via GUI |
+| **Unlock All Crests** | Set your own key | Instant unlock |
+| **Unlock All Tools** | Set your own key | Instant unlock |
+| **Unlock All Items** | Set your own key | Instant unlock |
+| **Max All Collectables** | Set your own key | Set to 99 each |
+| **Auto Silk Refill** | Set your own key | Toggle 2-second timer |
 
 ## 📥 Download & Installation
 
@@ -162,12 +172,12 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 - **Visual Feedback**: Toast notifications for all successful operations
 
 ### 🤖 Intelligent Systems
-- **Dynamic Tool Scanning**: Auto-discovers ToolItemBasic and ToolItemSkill objects
+- **Dynamic Tool Scanning**: Reflection-based discovery of ToolItemBasic and ToolItemSkill objects
 - **Smart Ammo Detection**: Conditionally shows ammo controls only when relevant
 - **Display Name Resolution**: Uses proper localized names (e.g., "Sharp dart" not "Silk Charge")
 - **Dual-Layer Unlocking**: PlayerData + HeroControllerConfig for complete ability unlocking
 - **Caching System**: Performance optimization for repeated UI operations
-- **Achievement System**: Auto-scans available achievements with searchable interface
+- **Achievement System**: Reflection-based achievement scanning with searchable interface
 - **Speed Control**: Real-time game speed manipulation with configurable multipliers
 - **Equipment Override**: Bypass location restrictions for equipment changes
 
