@@ -1,6 +1,6 @@
 # Hollow Knight: Silksong - Simple Cheats
 
-![Hollow Knight Silksong Cheat Mod](https://github.com/user-attachments/assets/8aacc348-9d27-4e53-af03-710e1a2c0c02)
+![Hollow Knight Silksong Cheat Mod](https://github.com/user-attachments/assets/4b8da06c-5bd1-4a89-acd2-f09d03a0825b)
 
 Professional cheat with GUI interface, customizable keybinds, and balance system.
 
@@ -16,6 +16,12 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 - 🛡️ **Player Skills System** - Unlock core abilities (Double Jump, Dash, Wall Jump, etc.)
 - 🎯 **Advanced Tool Management** - Smart tool/skill unlocking with ammo detection
 - 🔄 **Auto-Refresh Features** - Dynamic UI updates and intelligent caching
+- 🛡️ **Invincibility Modes** - Full invincibility or prevent death only options
+- ⚡ **Game Speed Control** - Configurable speed multipliers for time manipulation
+- 🎒 **Equipment Freedom** - Change equipment anywhere, bypass location restrictions
+- 🧭 **Always-On Navigation** - Permanent compass and magnetite brooch effects
+- 🗺️ **Complete Map Unlock** - Reveal all areas instantly
+- 🏆 **Steam Achievement System** - Award individual or all achievements with search
 
 ## 🎯 What This Does
 
@@ -27,6 +33,12 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Auto Silk Refill** | Automatic silk restoration every 2 seconds | ✅ Toggle |
 | **One Hit Kill Mode** | Massive damage mode for enemies | ✅ Toggle |
 | **Infinite Air Jump** | Unlimited air jumping (cheat mode) | ✅ Toggle |
+| **Invincibility** | Full invincibility or prevent death only | ✅ Toggle |
+| **Game Speed Control** | Adjustable game speed with configurable multiplier | ✅ Toggle |
+| **Change Equipment Anywhere** | Modify equipment outside of designated areas | ✅ Toggle |
+| **Player Skills Toggle** | Enable/disable all player skills + super jump | ✅ Toggle |
+| **Always Active Compass** | Permanent compass and magnetite brooch effects | ✅ Toggle |
+| **Unlock All Maps** | Reveal all map areas instantly | ✅ Toggle |
 
 #### 📊 Action Amounts
 | Feature | Function | Customizable |
@@ -61,6 +73,14 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Glide/Umbrella** | Unlock gliding ability | ✅ PlayerData + Config |
 | **Grappling Hook** | Unlock harpoon dash ability | ✅ PlayerData + Config |
 
+#### 🏆 Steam Achievements
+| Feature | Function | Type |
+|---------|----------|------|
+| **Achievement Browser** | Searchable dropdown of all available achievements | 🔍 Dynamic |
+| **Individual Awards** | Award specific achievements instantly | ✅ Single-click |
+| **Award All** | Unlock all Steam/platform achievements at once | 🛡️ Confirmation Modal |
+| **Smart Detection** | Auto-scans available achievements from game data | 🤖 AI-powered |
+
 #### ⚡ Quick Actions
 | Action | Function | Safety |
 |--------|----------|--------|
@@ -71,6 +91,7 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Unlock All Crest Tools** | Unlock all tool-based crests | 🛡️ Confirmation Modal |
 | **Max All Collectables** | Set all collectables to maximum | 🛡️ Confirmation Modal |
 | **Unlock All Fast Travel** | Unlock all 10+ fast travel locations | 🛡️ Confirmation Modal |
+| **Award All Achievements** | Unlock all 52 Steam/platform achievements | 🛡️ Confirmation Modal |
 
 ### Hotkeys (Fully Customizable)
 
@@ -146,6 +167,9 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 - **Display Name Resolution**: Uses proper localized names (e.g., "Sharp dart" not "Silk Charge")
 - **Dual-Layer Unlocking**: PlayerData + HeroControllerConfig for complete ability unlocking
 - **Caching System**: Performance optimization for repeated UI operations
+- **Achievement System**: Auto-scans available achievements with searchable interface
+- **Speed Control**: Real-time game speed manipulation with configurable multipliers
+- **Equipment Override**: Bypass location restrictions for equipment changes
 
 ### 🎮 Player Skills Deep Integration
 - **Core Movement**: Double Jump, Dash, Wall Jump with proper state management
