@@ -2,6 +2,10 @@
 
 ![Hollow Knight Silksong Cheat Mod](https://github.com/user-attachments/assets/7aa44388-eff2-452c-9ff6-4cc56f26fd9f)
 
+**🔥 Dual Framework Support** - Single codebase builds for both **BepInEx** and **MelonLoader**
+
+![Dual Framework Build Configurations](https://github.com/user-attachments/assets/29be326c-b3ff-4d07-9330-534f3e4d021a)
+
 Professional cheat with GUI interface, customizable keybinds, and balance system.
 
 ## ✨ Key Features
@@ -149,24 +153,43 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 ### Option 1: Download from Nexus Mods (Recommended)
 🎮 **For users who just want to play:**
 - Download the latest release from [Nexus Mods](https://www.nexusmods.com/hollowknightsilksong/mods/19)
+- **Choose your framework**: BepInEx (recommended) or MelonLoader versions available
 - Follow the installation instructions on the mod page
 
-### Option 2: Build from Source
+### Option 2: Build from Source  
 🛠️ **For developers:**
 - Clone this repository and build the project
+- **Dual Framework Support**: Build configurations for both BepInEx and MelonLoader
+- Build configurations: `Release-BepInEx`, `Release-MelonLoader`, `Debug-BepInEx`, `Debug-MelonLoader`
 - Requires Visual Studio or .NET SDK
 
 ## 🔧 Requirements
 
+**Choose your preferred mod framework:**
+
+### Option A: BepInEx (Recommended)
+- **BepInEx Framework** (latest version) 
+- Download from: [BepInEx Releases](https://github.com/BepInEx/BepInEx/releases)
+- More stable, better performance, wider mod compatibility
+
+### Option B: MelonLoader  
 - **MelonLoader Framework** (latest version)
 - Download from: [MelonLoader Releases](https://github.com/LavaGang/MelonLoader/releases)
+- Alternative framework option
 
 ## 📋 Manual Installation
 
-1. Install MelonLoader to your Hollow Knight: Silksong installation
-2. Place `SilkSong.dll` in: `<Game>/Mods/`
+### For BepInEx (Recommended):
+1. Install BepInEx to your Hollow Knight: Silksong installation
+2. Place `SilkSong.BepInEx.dll` in: `<Game>/BepInEx/plugins/`
 3. Launch game, press `INSERT` or `TILDE (~)` to open GUI
-4. Customize your experience through the interface
+
+### For MelonLoader:
+1. Install MelonLoader to your Hollow Knight: Silksong installation  
+2. Place `SilkSong.MelonLoader.dll` in: `<Game>/Mods/`
+3. Launch game, press `INSERT` or `TILDE (~)` to open GUI
+
+Both versions provide identical functionality - choose based on your preferred framework!
 
 ## 🎚️ Usage Guide
 
@@ -213,10 +236,13 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 - **Advanced Movement**: Grappling Hook (Harpoon Dash) for complex navigation
 
 ### 📊 Technical Excellence
+- **Dual Framework Architecture**: Single codebase supporting both BepInEx and MelonLoader
+- **Conditional Compilation**: Framework-specific code using `#if MELONLOADER` / `#if BEPINEX` directives  
 - **Reflection-Based**: Dynamic access to private game systems
 - **Error Handling**: Robust try-catch with meaningful user feedback
 - **Memory Management**: Efficient caching and cleanup
-- **Cross-Platform**: Works with any Unity/MelonLoader configuration
+- **Cross-Platform**: Works with any Unity/BepInEx/MelonLoader configuration
+- **Professional Build System**: Visual Studio configurations for both frameworks
 
 ## 📝 Compatibility Notes
 
