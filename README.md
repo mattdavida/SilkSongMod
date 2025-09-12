@@ -182,14 +182,18 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 ### For BepInEx (Recommended):
 1. Install BepInEx to your Hollow Knight: Silksong installation
 2. Place `SilkSong.BepInEx.dll` in: `<Game>/BepInEx/plugins/`
-3. Launch game, press `INSERT` or `TILDE (~)` to open GUI
+3. **Required dependency**: Place `UniverseLib.Mono.dll` in: `<Game>/BepInEx/plugins/`
+4. Launch game, press `INSERT` or `TILDE (~)` to open GUI
 
 ### For MelonLoader:
 1. Install MelonLoader to your Hollow Knight: Silksong installation  
 2. Place `SilkSong.MelonLoader.dll` in: `<Game>/Mods/`
-3. Launch game, press `INSERT` or `TILDE (~)` to open GUI
+3. **Required dependency**: Place `UniverseLib.Mono.dll` in: `<Game>/Mods/`
+4. Launch game, press `INSERT` or `TILDE (~)` to open GUI
 
 Both versions provide identical functionality - choose based on your preferred framework!
+
+**📦 UniverseLib.Mono.dll** is required for the GUI system to function properly.
 
 ## 🎚️ Usage Guide
 
