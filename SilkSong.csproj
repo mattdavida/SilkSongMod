@@ -5,38 +5,83 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <!-- Define build configurations -->
+    <Configurations>Debug-MelonLoader;Release-MelonLoader;Debug-BepInEx;Release-BepInEx</Configurations>
   </PropertyGroup>
 
+  <!-- MelonLoader Configuration -->
+  <PropertyGroup Condition="$(Configuration.Contains('MelonLoader'))">
+    <DefineConstants>$(DefineConstants);MELONLOADER</DefineConstants>
+    <OutputPath>bin\MelonLoader\$(Configuration.Replace('-MelonLoader', ''))\</OutputPath>
+    <AssemblyName>SilkSong.MelonLoader</AssemblyName>
+  </PropertyGroup>
+
+  <!-- BepInEx Configuration -->
+  <PropertyGroup Condition="$(Configuration.Contains('BepInEx'))">
+    <DefineConstants>$(DefineConstants);BEPINEX</DefineConstants>
+    <OutputPath>bin\BepInEx\$(Configuration.Replace('-BepInEx', ''))\</OutputPath>
+    <AssemblyName>SilkSong.BepInEx</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Common Unity Engine References -->
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\Hollow Knight Silksong_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="MelonLoader">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Ori and the Will of the Wisps\MelonLoader\net35\MelonLoader.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\Hollow Knight Silksong_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\Hollow Knight Silksong_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.SceneManagementModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\Hollow Knight Silksong_Data\Managed\UnityEngine.SceneManagementModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\Hollow Knight Silksong_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\Hollow Knight Silksong_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UIModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\Hollow Knight Silksong_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\Hollow Knight Silksong_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
 
+  <!-- MelonLoader-specific References -->
+  <ItemGroup Condition="$(Configuration.Contains('MelonLoader'))">
+    <Reference Include="MelonLoader">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Ori and the Will of the Wisps\MelonLoader\net35\MelonLoader.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- BepInEx-specific References -->
+  <ItemGroup Condition="$(Configuration.Contains('BepInEx'))">
+    <Reference Include="BepInEx">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight Silksong\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Common NuGet Packages -->
   <ItemGroup>
     <PackageReference Include="UniverseLib.Mono" Version="1.5.1" />
   </ItemGroup>

@@ -6,14 +6,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SilkSong", "SilkSong.csproj
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
+		Debug-BepInEx|AnyCPU = Debug-BepInEx|AnyCPU
+		Debug-MelonLoader|AnyCPU = Debug-MelonLoader|AnyCPU
+		Release-BepInEx|AnyCPU = Release-BepInEx|AnyCPU
+		Release-MelonLoader|AnyCPU = Release-MelonLoader|AnyCPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Release|Any CPU.Build.0 = Release|Any CPU
+		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Debug-BepInEx|AnyCPU.ActiveCfg = Debug-BepInEx|AnyCPU
+		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Debug-BepInEx|AnyCPU.Build.0 = Debug-BepInEx|AnyCPU
+		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Debug-MelonLoader|AnyCPU.ActiveCfg = Debug-MelonLoader|AnyCPU
+		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Debug-MelonLoader|AnyCPU.Build.0 = Debug-MelonLoader|AnyCPU
+		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Release-BepInEx|AnyCPU.ActiveCfg = Release-BepInEx|AnyCPU
+		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Release-BepInEx|AnyCPU.Build.0 = Release-BepInEx|AnyCPU
+		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Release-MelonLoader|AnyCPU.ActiveCfg = Release-MelonLoader|AnyCPU
+		{376AB299-EBEC-66F2-AAAF-222DE4FB3742}.Release-MelonLoader|AnyCPU.Build.0 = Release-MelonLoader|AnyCPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

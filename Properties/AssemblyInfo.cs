@@ -1,12 +1,18 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
+#if MELONLOADER
 using MelonLoader;
+#endif
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("SilkSong")]
+#if MELONLOADER
 [assembly: AssemblyDescription("A MelonLoader mod for Hollow Knight: Silksong")]
+#elif BEPINEX
+[assembly: AssemblyDescription("A BepInEx mod for Hollow Knight: Silksong")]
+#endif
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("SilkSongMod")]
@@ -35,6 +41,8 @@ using MelonLoader;
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
+#if MELONLOADER
 // MelonLoader attributes
 [assembly: MelonInfo(typeof(SilkSong.SilkSongMod), "SilkSongMod", "1.0.0", "YourName")]
 [assembly: MelonGame("Team Cherry", "Hollow Knight Silksong")]
+#endif

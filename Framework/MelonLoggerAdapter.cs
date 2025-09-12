@@ -1,3 +1,4 @@
+#if MELONLOADER
 using MelonLoader;
 using SilkSong.Interfaces;
 
@@ -15,3 +16,4 @@ namespace SilkSong.Framework
         }
     }
 }
+#endif

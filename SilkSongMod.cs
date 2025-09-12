@@ -1,4 +1,9 @@
-﻿using MelonLoader;
+﻿#if MELONLOADER
+using MelonLoader;
+#elif BEPINEX
+using BepInEx;
+using BepInEx.Logging;
+#endif
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
@@ -17,7 +22,12 @@ using SilkSong.Services;
 
 namespace SilkSong
 {
+#if MELONLOADER
     public class SilkSongMod : MelonMod
+#elif BEPINEX
+    [BepInPlugin("com.silksong.cheats", "Silksong Cheats", "1.0.0")]
+    public class SilkSongMod : BaseUnityPlugin
+#endif
     {
         private Component heroController;
         private bool autoRefillSilk = false;
@@ -37,7 +47,11 @@ namespace SilkSong
         private ConfirmationSystem confirmationSystem = new ConfirmationSystem();
         
         // Framework abstraction layer
+#if MELONLOADER
         private IModLogger logger = new MelonLoggerAdapter();
+#elif BEPINEX
+        private IModLogger logger;
+#endif
         private IInputHandler inputHandler = new UnityInputAdapter();
         private ITimeProvider timeProvider = new UnityTimeAdapter();
         
@@ -100,6 +114,7 @@ namespace SilkSong
         private bool isSettingKeybind = false;
         private int keybindToSet = -1;
 
+#if MELONLOADER
         [System.Obsolete]
         public override void OnApplicationStart()
         {
@@ -117,8 +132,27 @@ namespace SilkSong
             // Initialize GUI context
             InitializeGuiContext();
         }
+#elif BEPINEX
+        void Awake()
+        {
+            // Initialize BepInEx logger
+            logger = new BepInExLoggerAdapter(Logger);
+            
+            logger.Log("Silksong Simple Cheats Mod v1.0 - Ready!");
+            logger.Log("Controls: INSERT/TILDE=Toggle GUI (Keybinds disabled by default - enable in GUI settings if desired)");
+            
+            // Initialize GUI context
+            InitializeGuiContext();
+            
+            logger.Log("Silksong Simple Cheats Mod initialized successfully!");
+        }
+#endif
 
+#if MELONLOADER
         public override void OnUpdate()
+#elif BEPINEX
+        void Update()
+#endif
         {
             // GUI Toggle (Insert or Tilde)
             if (inputHandler.GetKeyDown(KeyCode.Insert) || inputHandler.GetKeyDown(KeyCode.BackQuote))
@@ -139,11 +173,11 @@ namespace SilkSong
 
                         float startupDelay = 1f;
                         Universe.Init(startupDelay, OnUniverseLibInitialized, LogHandler, config);
-                        MelonLogger.Msg("UniverseLib initialization started...");
+                        logger.Log("UniverseLib initialization started...");
                     }
                     catch (Exception e)
                     {
-                        MelonLogger.Msg($"Failed to initialize UniverseLib: {e.Message}");
+                        logger.Log($"Failed to initialize UniverseLib: {e.Message}");
                         // Fall back to basic cursor management
                         Cursor.lockState = CursorLockMode.None;
                         Cursor.visible = true;
@@ -170,7 +204,7 @@ namespace SilkSong
                     }
                 }
 
-                MelonLogger.Msg($"GUI {(showGUI ? "Enabled" : "Disabled")}");
+                logger.Log($"GUI {(showGUI ? "Enabled" : "Disabled")}");
             }
 
             // Cache the hero controller reference
@@ -208,7 +242,7 @@ namespace SilkSong
                     if (inputHandler.GetKeyDown(key) && key != KeyCode.Insert && key != KeyCode.Escape)
                     {
                         currentKeybinds[keybindToSet] = key;
-                        MelonLogger.Msg($"Keybind for {keybindNames[keybindToSet]} set to {key}");
+                        logger.Log($"Keybind for {keybindNames[keybindToSet]} set to {key}");
                         isSettingKeybind = false;
                         keybindToSet = -1;
                         break;
@@ -219,7 +253,7 @@ namespace SilkSong
                 {
                     isSettingKeybind = false;
                     keybindToSet = -1;
-                    MelonLogger.Msg("Keybind setting cancelled");
+                    logger.Log("Keybind setting cancelled");
                 }
             }
 
@@ -397,18 +431,18 @@ namespace SilkSong
             {
                 uiBase = UniversalUI.RegisterUI("SilkSongCheatGUI", null);
                 universeLibInitialized = true;
-                MelonLogger.Msg("UniverseLib initialized successfully!");
+                logger.Log("UniverseLib initialized successfully!");
                         }
                         catch (Exception e)
                         {
-                MelonLogger.Msg($"Failed to register UI with UniverseLib: {e.Message}");
+                logger.Log($"Failed to register UI with UniverseLib: {e.Message}");
             }
         }
 
         private void LogHandler(string message, UnityEngine.LogType type)
         {
-            // Forward UniverseLib logs to MelonLoader
-            MelonLogger.Msg($"[UniverseLib] {message}");
+            // Forward UniverseLib logs to the framework logger
+            logger.Log($"[UniverseLib] {message}");
         }
 
 
@@ -438,17 +472,42 @@ namespace SilkSong
 
 
 
+#if MELONLOADER
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)
         {
             base.OnSceneWasLoaded(buildIndex, sceneName);
-            MelonLogger.Msg($"Scene: {sceneName}");
+            logger.Log($"Scene: {sceneName}");
             heroController = null; // Reset hero controller for new scene
 
             // Reset damage scanning for new scene
             balanceService.ResetScanState();
         }
+#elif BEPINEX
+        void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+        
+        void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+        
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            logger.Log($"Scene: {scene.name}");
+            heroController = null; // Reset hero controller for new scene
 
+            // Reset damage scanning for new scene
+            balanceService.ResetScanState();
+        }
+#endif
+
+#if MELONLOADER
         public override void OnGUI()
+#elif BEPINEX
+        void OnGUI()
+#endif
         {
             if (showGUI)
             {
@@ -612,11 +671,11 @@ namespace SilkSong
 
             if (autoRefillSilk)
             {
-                MelonLogger.Msg("Auto Silk Refill: ENABLED (every 2 seconds)");
+                logger.Log("Auto Silk Refill: ENABLED (every 2 seconds)");
             }
             else
             {
-                MelonLogger.Msg("Auto Silk Refill: DISABLED");
+                logger.Log("Auto Silk Refill: DISABLED");
             }
         }
 
@@ -633,17 +692,17 @@ namespace SilkSong
                     // Only log occasionally to avoid spam
                     if (silkRefillTimer == 0f) // Only on manual calls or first auto call
                     {
-                        MelonLogger.Msg("Silk refilled to max");
+                        logger.Log("Silk refilled to max");
                     }
                 }
                 else
                 {
-                    MelonLogger.Msg("RefillSilkToMax method not found");
+                    logger.Log("RefillSilkToMax method not found");
                 }
             }
             catch (Exception e)
             {
-                MelonLogger.Msg($"Error refilling silk: {e.Message}");
+                logger.Log($"Error refilling silk: {e.Message}");
             }
         }
 
@@ -661,15 +720,15 @@ namespace SilkSong
                 
                 if (infiniteAirJumpEnabled)
                 {
-                    MelonLogger.Msg("Infinite Air Jump found enabled in PlayerData - syncing toggle state");
+                    logger.Log("Infinite Air Jump found enabled in PlayerData - syncing toggle state");
                 }
                 
                 // Initialize default Yellow Tools via service
-                alwaysActiveToolsService.InitializeDefaultTools(null, MelonLogger.Msg);
+                alwaysActiveToolsService.InitializeDefaultTools(null, logger.Log);
             }
             catch (Exception e)
             {
-                MelonLogger.Msg($"Error initializing state from PlayerData: {e.Message}");
+                logger.Log($"Error initializing state from PlayerData: {e.Message}");
             }
         }
 

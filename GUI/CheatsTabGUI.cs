@@ -82,7 +82,6 @@ namespace SilkSong.UserInterface
             // Sync state from main class
             autoRefillSilk = autoRefillSilkState;
             infiniteAirJumpEnabled = infiniteAirJumpState;
-            gameSpeedText = context.GameStateService.GetGameSpeedText();
 
             // Begin scroll view
             scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(380), GUILayout.Height(windowRect.height - 120));
@@ -239,10 +238,7 @@ namespace SilkSong.UserInterface
                 GUILayout.Label("x", GUILayout.Width(15));
                 if (GUILayout.Button("Set", GUILayout.Width(50)))
                 {
-                    if (context.GameStateService.UpdateGameSpeedFromText(gameSpeedText, onToast, onToast))
-                    {
-                        gameSpeedText = context.GameStateService.GetGameSpeedText(); // Update display to processed value
-                    }
+                    context.GameStateService.UpdateGameSpeedFromText(gameSpeedText, onToast, onToast);
                 }
                 GUILayout.EndHorizontal();
 
