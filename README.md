@@ -24,6 +24,7 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 - ⚡ **Game Speed Control** - Configurable speed multipliers for time manipulation
 - 🎒 **Equipment Freedom** - Change equipment anywhere, bypass location restrictions
 - 🧭 **18 Always-Active Yellow Tools** - Complete passive exploration/support system with toggle control
+- 🎨 **Base Colors System** - 12 character color transformations with special effects (Fire, Ice, Shadow, Rainbow)
 - 🗺️ **Complete Map Unlock** - Reveal all areas instantly
 - 🏆 **Steam Achievement System** - Award individual or all achievements with search
 
@@ -50,6 +51,34 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 | **Currency** | Add money and shards | ✅ Input fields |
 | **Invincibility** | Full invincible or prevent death modes | ✅ Button toggle |
 | **Game Speed** | Configurable speed multiplier control | ✅ Input + Set |
+
+#### 🎨 Base Colors
+| Feature | Function | Type |
+|---------|----------|------|
+| **Character Color Transformation** | Change main character's appearance with preset color schemes | 🎨 One-click |
+| **Basic Colors** | Red, Blue, Green, Purple, Gold - simple solid color transformations | ✅ Instant |
+| **Special Effects** | Fire, Ice, Shadow - complex multi-layer color effects with movement trails | ⚡ Advanced |
+| **Rainbow Effects** | Rainbow 1 (Lightning), Rainbow 2 (Lava) - dynamic multi-color transformations | 🌈 Dynamic |
+| **Shadow Variants** | Gold Shadow, Red Shadow - striking color combinations with shadow patterns | 🔥 Premium |
+| **Visual Feedback** | Green highlighting shows currently active color transformation | 🎯 Active State |
+| **Reset Function** | One-click restoration to original character appearance | 🔄 Reset |
+
+**Available Transformations:**
+- **Basic Colors**: Red, Blue, Green, Purple, Gold - Clean, solid color changes
+- **Fire Effect**: Red-orange gradient with flame-like movement trails
+- **Ice Effect**: Blue-cyan gradient with crystalline movement effects  
+- **Shadow Effect**: Dark purple-black gradient with mysterious shadow trails
+- **Rainbow 1**: Bright electric colors with lightning-like effects
+- **Rainbow 2**: Warm rainbow colors with lava-like movement patterns
+- **Gold Shadow**: Bright yellow base with dramatic black shadow accents
+- **Red Shadow**: Orange base with deep black shadow contrasts
+
+**Features:**
+- ✅ **Instant Application** - Colors change immediately upon selection
+- 🎨 **Visual State Tracking** - Green highlighting shows active transformation
+- 🔄 **Easy Reset** - One-click return to original character appearance
+- ⚡ **Advanced Effects** - Multi-layer vertex color manipulation for complex transformations
+- 🎯 **Professional UI** - 2x2 button layout matching other mod sections
 
 #### 🧭 Always Active Tools (Yellow Tools System)
 **18 Yellow Tools** - Passive exploration and support benefits

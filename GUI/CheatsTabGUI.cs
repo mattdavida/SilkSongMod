@@ -24,7 +24,22 @@ namespace SilkSong.UserInterface
         private KeybindSettingsGUI keybindSettingsGUI = new KeybindSettingsGUI();
         // Collapsible section states
         private bool showToggleFeatures = true;
+        private bool showBaseColors = false;
         private bool showActionAmounts = false;
+        
+        // Base Colors GUI state tracking
+        private bool redActive = false;
+        private bool blueActive = false;
+        private bool greenActive = false;
+        private bool purpleActive = false;
+        private bool goldActive = false;
+        private bool fireActive = false;
+        private bool iceActive = false;
+        private bool shadowActive = false;
+        private bool rainbow1Active = false;
+        private bool rainbow2Active = false;
+        private bool goldShadowActive = false;
+        private bool redShadowActive = false;
         private bool showCollectibleItems = false;
         private bool showCrestTools = false;
         private bool showPlayerSkills = false;
@@ -242,6 +257,186 @@ namespace SilkSong.UserInterface
                 }
                 GUILayout.EndHorizontal();
 
+                GUILayout.EndVertical();
+            }
+
+            GUILayout.Space(5);
+
+            // Base Colors section
+            showBaseColors = DrawCollapsingHeader("Base Colors", showBaseColors);
+            if (showBaseColors)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
+                
+                if (context.HeroInspectorService != null)
+                {
+                    // Red and Blue
+                    GUILayout.BeginHorizontal();
+                    GUI.backgroundColor = redActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Red"))
+                    {
+                        SetActiveColor("red");
+                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.2f, 0.2f, 1f), onToast, onToast);
+                    }
+                    GUI.backgroundColor = blueActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Blue"))
+                    {
+                        SetActiveColor("blue");
+                        context.HeroInspectorService.ChangeDressColor(new Color(0.2f, 0.2f, 1f, 1f), onToast, onToast);
+                    }
+                    GUI.backgroundColor = Color.white;
+                    GUILayout.EndHorizontal();
+
+                    // Green and Purple
+                    GUILayout.BeginHorizontal();
+                    GUI.backgroundColor = greenActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Green"))
+                    {
+                        SetActiveColor("green");
+                        context.HeroInspectorService.ChangeDressColor(new Color(0.2f, 1f, 0.2f, 1f), onToast, onToast);
+                    }
+                    GUI.backgroundColor = purpleActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Purple"))
+                    {
+                        SetActiveColor("purple");
+                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.2f, 1f, 1f), onToast, onToast);
+                    }
+                    GUI.backgroundColor = Color.white;
+                    GUILayout.EndHorizontal();
+
+                    // Gold and Fire
+                    GUILayout.BeginHorizontal();
+                    GUI.backgroundColor = goldActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Gold"))
+                    {
+                        SetActiveColor("gold");
+                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.8f, 0.2f, 1f), onToast, onToast);
+                    }
+                    GUI.backgroundColor = fireActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Fire"))
+                    {
+                        SetActiveColor("fire");
+                        // Set red base color + fire movement effects
+                        // context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.3f, 0.2f, 1f), null, null); // Red base
+                        context.HeroInspectorService.ChangeVertexColor(2, 0, Color.red, null, null);
+                        context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(1f, 0.5f, 0f, 1f), null, null); // Orange
+                        context.HeroInspectorService.ChangeVertexColor(2, 2, Color.yellow, null, null);
+                        context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(1f, 0.8f, 0f, 1f), null, null); // Gold
+                        onToast("Fire transformation!");
+                    }
+                    GUI.backgroundColor = Color.white;
+                    GUILayout.EndHorizontal();
+
+                    // Ice and Shadow
+                    GUILayout.BeginHorizontal();
+                    GUI.backgroundColor = iceActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Ice"))
+                    {
+                        SetActiveColor("ice");
+                        // Set blue base color + ice movement effects
+                        // context.HeroInspectorService.ChangeDressColor(new Color(0.3f, 0.7f, 1f, 1f), null, null); // Ice blue base
+                        context.HeroInspectorService.ChangeVertexColor(2, 0, Color.blue, null, null);
+                        context.HeroInspectorService.ChangeVertexColor(2, 1, Color.cyan, null, null);
+                        context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(0.7f, 0.9f, 1f, 1f), null, null); // Light blue
+                        context.HeroInspectorService.ChangeVertexColor(2, 3, Color.white, null, null);
+                        onToast("Ice transformation!");
+                    }
+                    GUI.backgroundColor = shadowActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Shadow"))
+                    {
+                        SetActiveColor("shadow");
+                        // Set dark base color + shadow movement effects
+                        // context.HeroInspectorService.ChangeDressColor(new Color(0.2f, 0.2f, 0.3f, 1f), null, null); // Dark base
+                        context.HeroInspectorService.ChangeVertexColor(3, 0, new Color(0.2f, 0.2f, 0.2f, 1f), null, null);
+                        context.HeroInspectorService.ChangeVertexColor(3, 1, new Color(0.4f, 0.2f, 0.4f, 1f), null, null); // Dark purple
+                        context.HeroInspectorService.ChangeVertexColor(3, 2, new Color(0.2f, 0.2f, 0.4f, 1f), null, null); // Dark blue
+                        context.HeroInspectorService.ChangeVertexColor(3, 3, new Color(0.1f, 0.1f, 0.1f, 1f), null, null); // Almost black
+                        onToast("Shadow transformation!");
+                    }
+                    GUI.backgroundColor = Color.white;
+                    GUILayout.EndHorizontal();
+
+                    // Rainbow 1 and Rainbow 2
+                    GUILayout.BeginHorizontal();
+                    GUI.backgroundColor = rainbow1Active ? Color.green : Color.white;
+                    if (GUILayout.Button("Rainbow 1"))
+                    {
+                        SetActiveColor("rainbow1");
+                        // Set bright base color + electric movement effects
+                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 1f, 0.7f, 1f), null, null); // Bright yellow base
+                        context.HeroInspectorService.ChangeVertexColor(2, 0, new Color(1f, 1f, 0f, 1f), null, null); // Bright yellow
+                        context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(0f, 1f, 1f, 1f), null, null); // Bright cyan
+                        context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(1f, 0f, 1f, 1f), null, null); // Bright magenta
+                        context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(1.2f, 1.2f, 1.2f, 1f), null, null); // Super bright white
+                        onToast("Rainbow 1 transformation!");
+                    }
+                    GUI.backgroundColor = rainbow2Active ? Color.green : Color.white;
+                    if (GUILayout.Button("Rainbow 2"))
+                    {
+                        SetActiveColor("rainbow2");
+                        // Set colorful base + rainbow movement effects
+                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.8f, 1f, 1f), null, null); // Light pink base
+                        context.HeroInspectorService.ChangeVertexColor(3, 0, Color.red, null, null);
+                        context.HeroInspectorService.ChangeVertexColor(3, 1, Color.green, null, null);
+                        context.HeroInspectorService.ChangeVertexColor(3, 2, Color.blue, null, null);
+                        context.HeroInspectorService.ChangeVertexColor(3, 3, Color.yellow, null, null);
+                        onToast("Rainbow 2 transformation!");
+                    }
+                    GUI.backgroundColor = Color.white;
+                    GUILayout.EndHorizontal();
+
+                    // Gold Shadow and Red Shadow
+                    GUILayout.BeginHorizontal();
+                    GUI.backgroundColor = goldShadowActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Gold Shadow"))
+                    {
+                        SetActiveColor("goldshadow");
+                        // Set yellow base color + black shadow pattern
+                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.9f, 0.2f, 1f), null, null); // Bright yellow base
+                        context.HeroInspectorService.ChangeVertexColor(2, 0, new Color(1f, 0.8f, 0f, 1f), null, null); // Golden yellow
+                        context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(0.2f, 0.2f, 0.1f, 1f), null, null); // Dark brown/black
+                        context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(0.8f, 0.7f, 0.1f, 1f), null, null); // Darker yellow
+                        context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(0.1f, 0.1f, 0.05f, 1f), null, null); // Black shadows
+                        onToast("Gold Shadow transformation!");
+                    }
+                    GUI.backgroundColor = redShadowActive ? Color.green : Color.white;
+                    if (GUILayout.Button("Red Shadow"))
+                    {
+                        SetActiveColor("redshadow");
+                        // Set orange base color + black shadow pattern
+                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.5f, 0.1f, 1f), null, null); // Bright orange base
+                        context.HeroInspectorService.ChangeVertexColor(3, 0, new Color(1f, 0.4f, 0f, 1f), null, null); // Deep orange
+                        context.HeroInspectorService.ChangeVertexColor(3, 1, new Color(0.1f, 0.1f, 0.1f, 1f), null, null); // Black shadows
+                        context.HeroInspectorService.ChangeVertexColor(3, 2, new Color(0.8f, 0.3f, 0f, 1f), null, null); // Darker orange
+                        context.HeroInspectorService.ChangeVertexColor(3, 3, new Color(0.05f, 0.05f, 0.05f, 1f), null, null); // Deep black shadows
+                        onToast("Red Shadow transformation!");
+                    }
+                    GUI.backgroundColor = Color.white;
+                    GUILayout.EndHorizontal();
+
+                    // Reset button (matching Always Active Tools style)
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Reset"))
+                    {
+                        ClearAllActiveColors();
+                        // Reset everything to default
+                        context.HeroInspectorService.ChangeDressColor(Color.white, null, null);
+                        for (int comp = 0; comp < 4; comp++)
+                        {
+                            for (int vertex = 0; vertex < 4; vertex++)
+                            {
+                                context.HeroInspectorService.ChangeVertexColor(comp, vertex, Color.white, null, null);
+                            }
+                        }
+                        onToast("All effects reset to default");
+                    }
+                    GUILayout.EndHorizontal();
+                }
+                else
+                {
+                    GUILayout.Label("Hero Inspector Service not available");
+                }
+                
                 GUILayout.EndVertical();
             }
 
@@ -929,6 +1124,56 @@ namespace SilkSong.UserInterface
         }
 
         #region Helper Methods
+
+        private void SetActiveColor(string colorName)
+        {
+            // Reset all colors to inactive
+            redActive = false;
+            blueActive = false;
+            greenActive = false;
+            purpleActive = false;
+            goldActive = false;
+            fireActive = false;
+            iceActive = false;
+            shadowActive = false;
+            rainbow1Active = false;
+            rainbow2Active = false;
+            goldShadowActive = false;
+            redShadowActive = false;
+            
+            // Set the selected color to active
+            switch (colorName.ToLower())
+            {
+                case "red": redActive = true; break;
+                case "blue": blueActive = true; break;
+                case "green": greenActive = true; break;
+                case "purple": purpleActive = true; break;
+                case "gold": goldActive = true; break;
+                case "fire": fireActive = true; break;
+                case "ice": iceActive = true; break;
+                case "shadow": shadowActive = true; break;
+                case "rainbow1": rainbow1Active = true; break;
+                case "rainbow2": rainbow2Active = true; break;
+                case "goldshadow": goldShadowActive = true; break;
+                case "redshadow": redShadowActive = true; break;
+            }
+        }
+
+        private void ClearAllActiveColors()
+        {
+            redActive = false;
+            blueActive = false;
+            greenActive = false;
+            purpleActive = false;
+            goldActive = false;
+            fireActive = false;
+            iceActive = false;
+            shadowActive = false;
+            rainbow1Active = false;
+            rainbow2Active = false;
+            goldShadowActive = false;
+            redShadowActive = false;
+        }
 
         private bool DrawCollapsingHeader(string title, bool isExpanded)
         {

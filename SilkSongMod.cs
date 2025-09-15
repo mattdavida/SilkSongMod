@@ -72,6 +72,10 @@ namespace SilkSong
         private AlwaysActiveToolsService alwaysActiveToolsService;
         private PlayerDataService playerDataService;
         private BalanceService balanceService;
+        private HeroInspectorService heroInspectorService;
+
+        // Flag to track if always active tools have been initialized (prevents reset on scene load)
+        private bool alwaysActiveToolsInitialized = false;
 
         // Scroll position for the GUI
         private Vector2 scrollPosition = Vector2.zero;
@@ -227,6 +231,10 @@ namespace SilkSong
                         {
                             currencyService.SetHeroController(heroController);
                         }
+                        if (heroInspectorService != null)
+                        {
+                            heroInspectorService.SetHeroController(heroController);
+                        }
                         
                         // Initialize state from PlayerData now that we have access
                         InitializeStateFromPlayerData();
@@ -378,6 +386,7 @@ namespace SilkSong
             alwaysActiveToolsService = new AlwaysActiveToolsService(logger);
             playerDataService = new PlayerDataService(logger);
             balanceService = new BalanceService(logger);
+            heroInspectorService = new HeroInspectorService(logger);
             
             // Set up shared systems
             guiContext.ToastSystem = toastSystem;
@@ -394,6 +403,7 @@ namespace SilkSong
             guiContext.GameStateService = gameStateService;
             guiContext.AlwaysActiveToolsService = alwaysActiveToolsService;
             guiContext.PlayerDataService = playerDataService;
+            guiContext.HeroInspectorService = heroInspectorService;
             
             // Set up framework interfaces
             guiContext.InputHandler = inputHandler;
@@ -723,8 +733,17 @@ namespace SilkSong
                     logger.Log("Infinite Air Jump found enabled in PlayerData - syncing toggle state");
                 }
                 
-                // Initialize default Yellow Tools via service
-                alwaysActiveToolsService.InitializeDefaultTools(null, logger.Log);
+                // Only initialize default Yellow Tools on first run, otherwise reapply current state
+                if (!alwaysActiveToolsInitialized)
+                {
+                    alwaysActiveToolsService.InitializeDefaultTools(null, logger.Log);
+                    alwaysActiveToolsInitialized = true;
+                }
+                else
+                {
+                    // Reapply current tool state after scene load
+                    alwaysActiveToolsService.ReapplyCurrentTools(null, logger.Log);
+                }
             }
             catch (Exception e)
             {

@@ -29,6 +29,7 @@ namespace SilkSong.UserInterface
         public AlwaysActiveToolsService AlwaysActiveToolsService { get; set; }
         public PlayerDataService PlayerDataService { get; set; }
         public BalanceService BalanceService { get; set; }
+        public HeroInspectorService HeroInspectorService { get; set; }
         
         // Framework interfaces (for CheatsTab)
         public IInputHandler InputHandler { get; set; }

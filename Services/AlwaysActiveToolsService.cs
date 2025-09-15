@@ -424,6 +424,40 @@ namespace SilkSong.Services
 
         #endregion
 
+        #region Scene Transition Support
+
+        /// <summary>
+        /// Reapplies the current always active tools without resetting their state.
+        /// Used when transitioning between scenes to maintain user selections.
+        /// </summary>
+        public bool ReapplyCurrentTools(Action<string> onSuccess = null, Action<string> onError = null)
+        {
+            try
+            {
+                bool success = ApplyAlwaysActiveTools();
+                
+                if (success)
+                {
+                    onSuccess?.Invoke($"Reapplied {alwaysActiveTools.Count} always-active tools after scene load");
+                    logger.Log($"Reapplied {alwaysActiveTools.Count} always-active tools after scene load");
+                }
+                else
+                {
+                    onError?.Invoke("Failed to reapply always-active tools");
+                }
+                
+                return success;
+            }
+            catch (Exception e)
+            {
+                onError?.Invoke($"Error reapplying tools: {e.Message}");
+                logger.Log($"Error in ReapplyCurrentTools: {e.Message}");
+                return false;
+            }
+        }
+
+        #endregion
+
         #region Private Helper Methods
 
         /// <summary>
