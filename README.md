@@ -10,27 +10,29 @@ Professional cheat with GUI interface, customizable keybinds, and balance system
 
 ## ✨ Key Features
 
-- 🎮 **Professional Collapsible GUI** - Press `INSERT` or `TILDE (~)` to toggle
-- 🔧 **Complete Keybind Customization** - Set, clear, or disable all hotkeys
+- 🎮 **Professional Collapsible GUI** - Press `INSERT` or `TILDE (~)` to toggle (plus configurable third key)
+- 🔧 **Complete Keybind Customization** - Set, clear, or disable all hotkeys + framework-specific GUI toggle key
 - ⚖️ **Balance System** - Damage multipliers for easier gameplay without cheat feel
 - 💬 **Toast Notifications** - Visual feedback for every action
 - 📱 **Responsive Design** - Collapsible sections with scrolling support
-- ⌨️ **Universal Keyboard Support** - Works with 60%, TKL, laptops, and Mac keyboards
+- ⌨️ **Universal Keyboard Support** - Works with 60%, TKL, laptops, and Mac keyboards + configurable GUI toggle key
 - 🚫 **Accident Prevention** - Confirmation modals for destructive actions
 - 🛡️ **Player Skills System** - Unlock core abilities (Double Jump, Dash, Wall Jump, etc.)
-- 🎯 **Advanced Tool Management** - Smart tool/skill unlocking with ammo detection
+- 🎯 **Advanced Tool Management** - Complete tool/skill scanning with master list access and ammo detection
+- ⚡ **Infinite Tool Use** - Toggle unlimited tool usage without ammo consumption
+- 🗡️ **Quick Attacks** - Toggle rapid attack mode for faster combat
 - 🔄 **Auto-Refresh Features** - Dynamic UI updates and intelligent caching
 - 🛡️ **Invincibility Modes** - Full invincibility or prevent death only options
 - ⚡ **Game Speed Control** - Configurable speed multipliers for time manipulation
 - 🎒 **Equipment Freedom** - Change equipment anywhere, bypass location restrictions
 - 🧭 **18 Always-Active Yellow Tools** - Complete passive exploration/support system with toggle control
-- 🎨 **Base Colors System** - 12 character color transformations with special effects (Fire, Ice, Shadow, Rainbow)
+- 🎨 **Enhanced Color System** - 12 character color transformations with special effects + scene-wide color toggle for environmental accents
 - 🗺️ **Complete Map Unlock** - Reveal all areas instantly
 - 🏆 **Steam Achievement System** - Award individual or all achievements with search
 
 ## 🎯 What This Does
 
-### GUI Interface (INSERT/TILDE to toggle)
+### GUI Interface (INSERT/TILDE + configurable key to toggle)
 
 #### 🔄 Toggle Features
 | Feature | Function | Type |

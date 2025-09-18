@@ -42,6 +42,5 @@ namespace SilkSong.UserInterface
         // Balance system state (simplified - most moved to BalanceService)
         public string GlobalMultiplierText { get; set; }
         public float GlobalMultiplier { get; set; }
-        public bool ShowDetails { get; set; }
     }
 }

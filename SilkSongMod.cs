@@ -3,6 +3,7 @@ using MelonLoader;
 #elif BEPINEX
 using BepInEx;
 using BepInEx.Logging;
+using BepInEx.Configuration;
 #endif
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -88,7 +89,6 @@ namespace SilkSong
         // Balance/multiplier system (moved to BalanceService)
         private string globalMultiplierText = "1.0";
         private float globalMultiplier = 1.0f;
-        private bool showDetails = false;
 
 
         // Infinite Air Jump toggle system (managed by PlayerSkillService)
@@ -118,12 +118,21 @@ namespace SilkSong
         private bool isSettingKeybind = false;
         private int keybindToSet = -1;
 
+        // Configuration for GUI toggle keybind
+#if BEPINEX
+        private ConfigEntry<string> guiToggleKeyConfig;
+#elif MELONLOADER
+        private MelonPreferences_Category keybindCategory;
+        private MelonPreferences_Entry<KeyCode> guiToggleKeyConfig;
+#endif
+        private KeyCode guiToggleKey = KeyCode.None; // Default to None - users can configure if desired
+
 #if MELONLOADER
         [System.Obsolete]
         public override void OnApplicationStart()
         {
             logger.Log("Silksong Simple Cheats Mod v1.0 - Ready!");
-            logger.Log("Controls: INSERT/TILDE=Toggle GUI (Keybinds disabled by default - enable in GUI settings if desired)");
+            logger.Log("Controls: INSERT/TILDE = Toggle GUI (configurable key available in UserData/MelonPreferences.cfg)");
 
             logger.Log("Silksong Simple Cheats Mod initialized successfully!");
         }
@@ -132,6 +141,9 @@ namespace SilkSong
         {
             base.OnInitializeMelon();
             logger.Log("Simple Cheats Mod Initialized!");
+            
+            // Initialize configuration first
+            InitializeKeybindConfiguration();
             
             // Initialize GUI context
             InitializeGuiContext();
@@ -143,7 +155,9 @@ namespace SilkSong
             logger = new BepInExLoggerAdapter(Logger);
             
             logger.Log("Silksong Simple Cheats Mod v1.0 - Ready!");
-            logger.Log("Controls: INSERT/TILDE=Toggle GUI (Keybinds disabled by default - enable in GUI settings if desired)");
+            
+            // Initialize configuration first
+            InitializeKeybindConfiguration();
             
             // Initialize GUI context
             InitializeGuiContext();
@@ -158,8 +172,9 @@ namespace SilkSong
         void Update()
 #endif
         {
-            // GUI Toggle (Insert or Tilde)
-            if (inputHandler.GetKeyDown(KeyCode.Insert) || inputHandler.GetKeyDown(KeyCode.BackQuote))
+            // GUI Toggle (Configurable key + legacy Insert/Tilde for backwards compatibility)
+            if ((guiToggleKey != KeyCode.None && inputHandler.GetKeyDown(guiToggleKey)) || 
+                inputHandler.GetKeyDown(KeyCode.Insert) || inputHandler.GetKeyDown(KeyCode.BackQuote))
             {
                 showGUI = !showGUI;
 
@@ -208,7 +223,8 @@ namespace SilkSong
                     }
                 }
 
-                logger.Log($"GUI {(showGUI ? "Enabled" : "Disabled")}");
+                string availableKeys = guiToggleKey != KeyCode.None ? $"{guiToggleKey}/Insert/Tilde" : "Insert/Tilde";
+                logger.Log($"GUI {(showGUI ? "Enabled" : "Disabled")} (Available keys: {availableKeys})");
             }
 
             // Cache the hero controller reference
@@ -413,7 +429,41 @@ namespace SilkSong
             guiContext.BalanceService = balanceService;
             guiContext.GlobalMultiplierText = globalMultiplierText;
             guiContext.GlobalMultiplier = globalMultiplier;
-            guiContext.ShowDetails = showDetails;
+        }
+
+        private void InitializeKeybindConfiguration()
+        {
+#if BEPINEX
+            // BepInEx creates: BepInEx/config/com.silksong.cheats.cfg
+            guiToggleKeyConfig = Config.Bind("Keybinds", "GUI Toggle Key", "None", 
+                "Key to open/close the cheat GUI. Insert/Tilde always work. Examples: F7, Home, G, Minus, None. Full list: https://docs.unity3d.com/ScriptReference/KeyCode.html");
+            
+            // Parse user-configured value
+            if (System.Enum.TryParse<KeyCode>(guiToggleKeyConfig.Value, true, out KeyCode parsedKey))
+            {
+                guiToggleKey = parsedKey;
+            }
+            else
+            {
+                guiToggleKey = KeyCode.None;
+                logger.Log($"Invalid key '{guiToggleKeyConfig.Value}' in config, using None");
+            }
+            
+            logger.Log($"Configuration loaded - GUI Toggle Key: {guiToggleKey}");
+            
+#elif MELONLOADER
+            // MelonLoader creates: UserData/MelonPreferences.cfg
+            keybindCategory = MelonPreferences.CreateCategory("SilkSongKeybinds", "SilkSong Cheat Keybinds");
+            
+            guiToggleKeyConfig = keybindCategory.CreateEntry("GuiToggleKey", KeyCode.None, 
+                "Key to open/close the cheat GUI. Insert/Tilde always work. Examples: F7, Home, G, Minus, None. Full list: https://docs.unity3d.com/ScriptReference/KeyCode.html");
+            
+            // Load user-configured value
+            guiToggleKey = guiToggleKeyConfig.Value;
+            
+            logger.Log($"Preferences loaded - GUI Toggle Key: {guiToggleKey}");
+            logger.Log("For valid key names, see: https://docs.unity3d.com/ScriptReference/KeyCode.html");
+#endif
         }
 
         private void UpdateGuiContextForBalance()
@@ -424,7 +474,6 @@ namespace SilkSong
             // Sync balance system state to context
             guiContext.GlobalMultiplierText = globalMultiplierText;
             guiContext.GlobalMultiplier = globalMultiplier;
-            guiContext.ShowDetails = showDetails;
         }
 
         private void SyncFromGuiContextForBalance()
@@ -432,7 +481,6 @@ namespace SilkSong
             // Sync balance system state back from context
             globalMultiplierText = guiContext.GlobalMultiplierText;
             globalMultiplier = guiContext.GlobalMultiplier;
-            showDetails = guiContext.ShowDetails;
         }
 
         private void OnUniverseLibInitialized()
@@ -538,7 +586,6 @@ namespace SilkSong
         private void GuiWindow(int windowID)
         {
             GUILayout.BeginVertical();
-
             // Title
             GUILayout.Label("SILKSONG CHEATS", GUI.skin.box);
             GUILayout.Space(5);

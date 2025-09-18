@@ -28,7 +28,6 @@ namespace SilkSong.UserInterface
             RenderHeader();
             RenderMultiplierControls(context);
             RenderStatusDisplay(context);
-            RenderTechnicalDetails(context);
 
             GUILayout.EndScrollView();
         }
@@ -95,68 +94,5 @@ namespace SilkSong.UserInterface
             GUILayout.Space(15);
         }
 
-        private void RenderTechnicalDetails(GuiContext context)
-        {
-            // Optional detailed view toggle
-            context.ShowDetails = GUILayout.Toggle(context.ShowDetails, "Show Technical Details");
-
-            if (context.ShowDetails)
-            {
-                GUILayout.Space(5);
-                RenderExamplesAndInfo(context);
-                RenderFieldsList(context);
-            }
-        }
-
-        private void RenderExamplesAndInfo(GuiContext context)
-        {
-            // Examples and target info
-            GUILayout.Label("Examples: 1.0 = Normal, 1.5 = +50% damage, 2.0 = Double damage", GUI.skin.label);
-            GUILayout.Space(5);
-
-            if (context.BalanceService.FieldsScanned && context.BalanceService.DamageFieldCount > 0)
-            {
-                GUILayout.Label("Target: DamageEnemies Components", GUI.skin.box);
-                GUILayout.Label($"Found {context.BalanceService.DamageFieldCount} damage-related fields", GUI.skin.label);
-                GUILayout.Label("Multiplier will modify all damage values proportionally (≥1.0 only)", GUI.skin.label);
-                GUILayout.Space(5);
-            }
-        }
-
-        private void RenderFieldsList(GuiContext context)
-        {
-            GUILayout.Label($"All Fields ({context.BalanceService.DamageFieldCount} found)", GUI.skin.box);
-
-            // Show simplified technical list
-            var uniqueFieldNames = new HashSet<string>();
-            var damageFields = context.BalanceService.DamageFields;
-            var damageBehaviours = context.BalanceService.DamageBehaviours;
-            
-            for (int i = 0; i < damageFields.Count; i++)
-            {
-                FieldInfo field = damageFields[i];
-                MonoBehaviour behaviour = damageBehaviours[i];
-
-                if (behaviour == null) continue;
-
-                string fieldName = field.Name;
-                if (uniqueFieldNames.Contains(fieldName)) continue;
-                uniqueFieldNames.Add(fieldName);
-
-                GUILayout.BeginHorizontal();
-                GUILayout.Label(fieldName, GUILayout.Width(200));
-
-                // Count how many instances
-                int instanceCount = 0;
-                for (int j = 0; j < damageFields.Count; j++)
-                {
-                    if (damageBehaviours[j] != null && damageFields[j].Name == fieldName)
-                        instanceCount++;
-                }
-
-                GUILayout.Label($"({instanceCount} instances)", GUILayout.Width(100));
-                GUILayout.EndHorizontal();
-            }
-        }
     }
 }

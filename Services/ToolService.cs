@@ -61,7 +61,7 @@ namespace SilkSong.Services
         #region Tool Scanning and Management
 
         /// <summary>
-        /// Scans for available tools in the game.
+        /// Scans for available tools using ToolItemManager.toolItems.
         /// </summary>
         public void ScanTools()
         {
@@ -73,67 +73,67 @@ namespace SilkSong.Services
 
             try
             {
-                // Find all ToolItemBasic objects (they have display names and inherit baseStorageAmount from ToolItem)
-                UnityEngine.Object[] basicObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
-
-                foreach (UnityEngine.Object obj in basicObjects)
+                // Get tools from ToolItemManager - this must work
+                var toolItemsEnumerable = GetToolItemsFromManager();
+                if (toolItemsEnumerable == null)
                 {
-                    if (obj != null)
+                    throw new InvalidOperationException("Failed to get toolItems from ToolItemManager - this is required for proper tool scanning");
+                }
+
+                int processedCount = 0;
+                foreach (var toolItem in toolItemsEnumerable)
+                {
+                    if (toolItem != null)
                     {
                         try
                         {
-                            string displayName = GetToolDisplayName(obj);
+                            string typeName = toolItem.GetType().Name;
+                            string objectName = ((UnityEngine.Object)toolItem).name;
+                            string displayName = GetToolDisplayName(toolItem as UnityEngine.Object);
+                            
                             if (!string.IsNullOrEmpty(displayName) && !IsInvalidDisplayName(displayName))
                             {
-                                if (!availableTools.Contains(displayName))
+                                // Handle duplicate display names by making them unique
+                                string uniqueDisplayName = displayName;
+                                if (availableTools.Contains(displayName))
                                 {
-                                    availableTools.Add(displayName);
-                                    availableBasicTools.Add(displayName);
-                                    toolDisplayNameToObjectName[displayName] = obj.name;
+                                    // Make it unique by appending the object name in parentheses
+                                    uniqueDisplayName = $"{displayName} ({objectName})";
                                 }
+                                
+                                availableTools.Add(uniqueDisplayName);
+                                toolDisplayNameToObjectName[uniqueDisplayName] = objectName;
+
+                                // Categorize by type - include ALL tool types, not just Basic and Skill
+                                if (typeName == "ToolItemSkill")
+                                {
+                                    availableSkills.Add(uniqueDisplayName);
+                                }
+                                else if (typeName == "ToolItemBasic")
+                                {
+                                    availableBasicTools.Add(uniqueDisplayName);
+                                }
+                                else
+                                {
+                                    // Other tool types (ToolItemLerpStates, ToolItemToggleState, etc.)
+                                    availableBasicTools.Add(uniqueDisplayName);
+                                }
+                                
+                                processedCount++;
                             }
+                            // Skip tools with empty or invalid display names
                         }
                         catch (Exception e)
                         {
-                            logger.Log($"Error processing ToolItemBasic {obj.name}: {e.Message}");
+                            logger.Log($"Error processing tool item {((UnityEngine.Object)toolItem).name}: {e.Message}");
                         }
                     }
                 }
 
-                // Also find all ToolItemSkill objects (like Silk Spear, etc.)
-                UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
-
-                foreach (UnityEngine.Object obj in skillObjects)
-                {
-                    if (obj != null)
-                    {
-                        try
-                        {
-                            string displayName = GetToolDisplayName(obj);
-                            if (!string.IsNullOrEmpty(displayName) && !IsInvalidDisplayName(displayName))
-                            {
-                                if (!availableTools.Contains(displayName))
-                                {
-                                    availableTools.Add(displayName);
-                                    availableSkills.Add(displayName);
-                                    toolDisplayNameToObjectName[displayName] = obj.name;
-                                }
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            logger.Log($"Error processing ToolItemSkill {obj.name}: {e.Message}");
-                        }
-                    }
-                }
-
-                // If we didn't find tools, add some default ones
+                // If we didn't find tools, something is wrong
                 if (availableTools.Count == 0)
                 {
-                    availableTools.AddRange(new string[] {
-                        "Silk", "Needle", "Healing Bandage", "Binding", "Cocoon",
-                        "Thread", "Weaving", "Warp", "Bind", "Wrap"
-                    });
+                    throw new InvalidOperationException("No tools found in ToolItemManager.toolItems - this indicates a problem with the tool scanning");
                 }
 
                 // Sort alphabetically for better UX
@@ -143,11 +143,13 @@ namespace SilkSong.Services
                 toolNames = availableTools.ToArray();
 
                 toolsScanned = true;
-                logger.Log($"Tool scanning complete. Found {availableTools.Count} tools ({availableSkills.Count} skills, {availableBasicTools.Count} basic tools)");
+                logger.Log($"Tool scanning complete using ToolItemManager.toolItems. Found {availableTools.Count} tools ({availableSkills.Count} skills, {availableBasicTools.Count} basic tools) from {processedCount} processed items");
             }
             catch (Exception e)
             {
-                logger.Log($"Error scanning tools: {e.Message}");
+                logger.Log($"CRITICAL ERROR: Tool scanning failed: {e.Message}");
+                logger.Log($"Stack trace: {e.StackTrace}");
+                throw; // Re-throw the exception since we no longer have fallbacks
             }
         }
 
@@ -281,25 +283,37 @@ namespace SilkSong.Services
 
             if (showSkillsOnly)
             {
-                // Build skills list fresh from ToolItemSkill objects (same as unlock method)
-                UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
-
-                foreach (UnityEngine.Object obj in skillObjects)
+                // Get tools from ToolItemManager - this must work
+                var toolItems = GetToolItemsFromManager();
+                if (toolItems == null)
                 {
-                    if (obj != null)
+                    throw new InvalidOperationException("Failed to get toolItems from ToolItemManager for filtering");
+                }
+                
+                foreach (var toolItem in toolItems)
+                {
+                    if (toolItem != null)
                     {
-                        try
+                        string typeName = toolItem.GetType().Name;
+                        // Only include ToolItemSkill for skills-only filter
+                        if (typeName == "ToolItemSkill")
                         {
-                            string displayName = GetToolDisplayName(obj);
-                            if (!string.IsNullOrEmpty(displayName) && !IsInvalidDisplayName(displayName))
+                            try
                             {
-                                if (!sourceList.Contains(displayName))
+                                string displayName = GetToolDisplayName(toolItem as UnityEngine.Object);
+                                if (!string.IsNullOrEmpty(displayName) && !IsInvalidDisplayName(displayName))
                                 {
-                                    sourceList.Add(displayName);
+                                    if (!sourceList.Contains(displayName))
+                                    {
+                                        sourceList.Add(displayName);
+                                    }
                                 }
                             }
+                            catch (Exception e)
+                            {
+                                logger.Log($"Error processing skill tool for filtering: {e.Message}");
+                            }
                         }
-                        catch { }
                     }
                 }
                 sourceList.Sort();
@@ -322,193 +336,73 @@ namespace SilkSong.Services
         }
 
         /// <summary>
-        /// Unlocks a specific tool by display name.
+        /// Unlocks a specific tool by display name using ToolItemManager.toolItems.
         /// </summary>
         public bool UnlockSpecificTool(string toolDisplayName)
         {
             try
             {
-                bool found = false;
-
-                // First try ToolItemBasic objects
-                UnityEngine.Object[] basicObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
-
-                foreach (UnityEngine.Object obj in basicObjects)
+                // Get tools from ToolItemManager - this must work
+                var toolItems = GetToolItemsFromManager();
+                if (toolItems == null)
                 {
-                    if (obj != null && obj.GetType().Name == "ToolItemBasic")
+                    throw new InvalidOperationException($"Failed to get toolItems from ToolItemManager for unlocking {toolDisplayName}");
+                }
+
+                // Get the actual object name from our mapping (for cases like "Silkshot (WebShot Architect)" -> "WebShot Architect")
+                string targetObjectName = null;
+                if (toolDisplayNameToObjectName.ContainsKey(toolDisplayName))
+                {
+                    targetObjectName = toolDisplayNameToObjectName[toolDisplayName];
+                }
+                
+                foreach (var toolItem in toolItems)
+                {
+                    if (toolItem != null)
                     {
                         try
                         {
-                            string objectDisplayName = GetToolDisplayName(obj);
-                            if (objectDisplayName == toolDisplayName)
+                            string objectName = ((UnityEngine.Object)toolItem).name;
+                            string objectDisplayName = GetToolDisplayName(toolItem as UnityEngine.Object);
+                            
+                            // Match either by display name directly OR by object name (for unique variants)
+                            bool isMatch = (objectDisplayName == toolDisplayName) || 
+                                          (targetObjectName != null && objectName == targetObjectName);
+                            
+                            if (isMatch)
                             {
-                                // Found the matching tool, use the same unlock logic as UnlockAllItems
-                                Type toolType = obj.GetType();
+                                // Found the matching tool
+                                Type toolType = toolItem.GetType();
                                 MethodInfo unlockMethod = toolType.GetMethod("Unlock");
 
                                 if (unlockMethod != null)
                                 {
-                                    // Find PopupFlags enum in nested types (same as UnlockAllItems)
-                                    Type popupFlagsType = null;
-                                    Type[] nestedTypes = toolType.GetNestedTypes();
-                                    foreach (Type nested in nestedTypes)
-                                    {
-                                        if (nested.Name.Contains("PopupFlags"))
-                                        {
-                                            popupFlagsType = nested;
-                                            break;
-                                        }
-                                    }
+                                    // Find PopupFlags enum in nested types
+                                    Type popupFlagsType = GetPopupFlagsType(toolType);
 
                                     if (popupFlagsType != null)
                                     {
                                         object itemGetFlag = Enum.Parse(popupFlagsType, "ItemGet");
-                                        unlockMethod.Invoke(obj, new object[] { null, itemGetFlag });
+                                        unlockMethod.Invoke(toolItem, new object[] { null, itemGetFlag });
                                     }
                                     else
                                     {
-                                        unlockMethod.Invoke(obj, new object[] { null, null });
+                                        unlockMethod.Invoke(toolItem, new object[] { null, null });
                                     }
 
-                                    logger.Log($"Unlocked {toolDisplayName}!");
-                                    found = true;
+                                    logger.Log($"Unlocked {toolDisplayName} using ToolItemManager!");
                                     return true;
-                                }
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            logger.Log($"Error processing tool {obj.name}: {e.Message}");
-                        }
-                    }
-                }
-
-                // If not found in ToolItemBasic, try ToolItemSkill objects
-                if (!found)
-                {
-                    UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
-
-                    foreach (UnityEngine.Object obj in skillObjects)
-                    {
-                        if (obj != null && obj.GetType().Name == "ToolItemSkill")
-                        {
-                            try
-                            {
-                                string objectDisplayName = GetToolDisplayName(obj);
-                                if (objectDisplayName == toolDisplayName)
-                                {
-                                    // Found the matching ToolItemSkill, use the same unlock logic as F9 hotkey
-                                    Type toolType = obj.GetType();
-                                    MethodInfo unlockMethod = toolType.GetMethod("Unlock");
-
-                                    if (unlockMethod != null)
-                                    {
-                                        // Find PopupFlags enum in nested types (same as F9 logic)
-                                        Type popupFlagsType = null;
-                                        Type[] nestedTypes = toolType.GetNestedTypes();
-                                        foreach (Type nested in nestedTypes)
-                                        {
-                                            if (nested.Name.Contains("PopupFlags"))
-                                            {
-                                                popupFlagsType = nested;
-                                                break;
-                                            }
-                                        }
-
-                                        if (popupFlagsType != null)
-                                        {
-                                            object itemGetFlag = Enum.Parse(popupFlagsType, "ItemGet");
-                                            unlockMethod.Invoke(obj, new object[] { null, itemGetFlag });
-                                        }
-                                        else
-                                        {
-                                            unlockMethod.Invoke(obj, new object[] { null, null });
-                                        }
-
-                                        logger.Log($"Unlocked {toolDisplayName}!");
-                                        found = true;
-                                        return true;
-                                    }
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                logger.Log($"Error processing ToolItemSkill {obj.name}: {e.Message}");
-                            }
-                        }
-                    }
-                }
-
-                if (!found)
-                {
-                    logger.Log($"Could not find tool: {toolDisplayName}");
-                }
-                return found;
-            }
-            catch (Exception e)
-            {
-                logger.Log($"Error unlocking {toolDisplayName}: {e.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Sets tool storage amount for a specific tool.
-        /// </summary>
-        public bool SetToolStorage(string toolDisplayName, int amount)
-        {
-            try
-            {
-                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
-
-                foreach (UnityEngine.Object obj in allObjects)
-                {
-                    if (obj != null)
-                    {
-                        try
-                        {
-                            string objectDisplayName = GetToolDisplayName(obj);
-
-                            if (objectDisplayName == toolDisplayName)
-                            {
-                                // Find baseStorageAmount field in the inheritance hierarchy
-                                FieldInfo baseStorageField = null;
-                                Type currentType = obj.GetType();
-
-                                while (currentType != null && baseStorageField == null)
-                                {
-                                    baseStorageField = currentType.GetField("baseStorageAmount",
-                                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                                    currentType = currentType.BaseType;
-                                }
-
-                                if (baseStorageField != null)
-                                {
-                                    // Check if this tool actually has storage (> 0) before allowing modification
-                                    int currentAmount = (int)baseStorageField.GetValue(obj);
-
-                                    if (currentAmount > 0)
-                                    {
-                                        baseStorageField.SetValue(obj, amount);
-                                        logger.Log($"Set {toolDisplayName} storage to {amount}!");
-                                        return true;
-                                    }
-                                    else
-                                    {
-                                        logger.Log($"{toolDisplayName} doesn't use storage (action tool)");
-                                        return false;
-                                    }
                                 }
                                 else
                                 {
-                                    logger.Log($"{toolDisplayName} has no storage field");
+                                    logger.Log($"No Unlock method found on {toolDisplayName}");
                                     return false;
                                 }
                             }
                         }
                         catch (Exception e)
                         {
-                            logger.Log($"Error processing tool {obj.name}: {e.Message}");
+                            logger.Log($"Error processing tool item {((UnityEngine.Object)toolItem).name}: {e.Message}");
                         }
                     }
                 }
@@ -518,33 +412,141 @@ namespace SilkSong.Services
             }
             catch (Exception e)
             {
-                logger.Log($"Error setting storage: {e.Message}");
-                return false;
+                logger.Log($"CRITICAL ERROR: Failed to unlock {toolDisplayName}: {e.Message}");
+                throw; // Re-throw since we no longer have fallbacks
             }
         }
 
         /// <summary>
-        /// Refills ammo for a specific tool.
+        /// Sets tool storage amount for a specific tool using ToolItemManager.toolItems.
+        /// </summary>
+        public bool SetToolStorage(string toolDisplayName, int amount)
+        {
+            try
+            {
+                // Try to get tools from ToolItemManager first
+                var toolItems = GetToolItemsFromManager();
+                
+                if (toolItems != null)
+                {
+                    foreach (var toolItem in toolItems)
+                    {
+                        if (toolItem != null)
+                        {
+                            try
+                            {
+                                string objectName = ((UnityEngine.Object)toolItem).name;
+                                string objectDisplayName = GetToolDisplayName(toolItem as UnityEngine.Object);
+
+                                // Get the actual object name from our mapping (for cases like "Silkshot (WebShot Architect)" -> "WebShot Architect")
+                                string targetObjectName = null;
+                                if (toolDisplayNameToObjectName.ContainsKey(toolDisplayName))
+                                {
+                                    targetObjectName = toolDisplayNameToObjectName[toolDisplayName];
+                                }
+
+                                // Match either by display name directly OR by object name (for unique variants)
+                                bool isMatch = (objectDisplayName == toolDisplayName) || 
+                                              (targetObjectName != null && objectName == targetObjectName);
+
+                                if (isMatch)
+                                {
+                                    // Find baseStorageAmount field in the inheritance hierarchy
+                                    FieldInfo baseStorageField = null;
+                                    Type currentType = toolItem.GetType();
+
+                                    while (currentType != null && baseStorageField == null)
+                                    {
+                                        baseStorageField = currentType.GetField("baseStorageAmount",
+                                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                                        currentType = currentType.BaseType;
+                                    }
+
+                                    if (baseStorageField != null)
+                                    {
+                                        // Check if this tool actually has storage (> 0) before allowing modification
+                                        int currentAmount = (int)baseStorageField.GetValue(toolItem);
+
+                                        if (currentAmount > 0)
+                                        {
+                                            baseStorageField.SetValue(toolItem, amount);
+                                            logger.Log($"Set {toolDisplayName} storage to {amount} using ToolItemManager!");
+                                            return true;
+                                        }
+                                        else
+                                        {
+                                            logger.Log($"{toolDisplayName} doesn't use storage (action tool)");
+                                            return false;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        logger.Log($"{toolDisplayName} has no storage field");
+                                        return false;
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                logger.Log($"Error processing tool item {((UnityEngine.Object)toolItem).name}: {e.Message}");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Failed to get toolItems from ToolItemManager for setting storage on {toolDisplayName}");
+                }
+
+                logger.Log($"Could not find tool: {toolDisplayName}");
+                return false;
+            }
+            catch (Exception e)
+            {
+                logger.Log($"CRITICAL ERROR: Failed to set storage for {toolDisplayName}: {e.Message}");
+                throw; // Re-throw since we no longer have fallbacks
+            }
+        }
+
+        /// <summary>
+        /// Refills ammo for a specific tool using ToolItemManager.toolItems.
         /// </summary>
         public bool RefillToolAmmo(string toolDisplayName)
         {
             try
             {
-                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
-
-                foreach (UnityEngine.Object obj in allObjects)
+                // Get tools from ToolItemManager - this must work
+                var toolItems = GetToolItemsFromManager();
+                if (toolItems == null)
                 {
-                    if (obj != null)
+                    throw new InvalidOperationException($"Failed to get toolItems from ToolItemManager for refilling ammo on {toolDisplayName}");
+                }
+
+                foreach (var toolItem in toolItems)
+                {
+                    if (toolItem != null)
                     {
                         try
                         {
-                            string objectDisplayName = GetToolDisplayName(obj);
+                            string objectName = ((UnityEngine.Object)toolItem).name;
+                            string objectDisplayName = GetToolDisplayName(toolItem as UnityEngine.Object);
 
-                            if (objectDisplayName == toolDisplayName)
+                            // Get the actual object name from our mapping (for cases like "Silkshot (WebShot Architect)" -> "WebShot Architect")
+                            string targetObjectName = null;
+                            if (toolDisplayNameToObjectName.ContainsKey(toolDisplayName))
+                            {
+                                targetObjectName = toolDisplayNameToObjectName[toolDisplayName];
+                            }
+
+                            // Match either by display name directly OR by object name (for unique variants)
+                            bool isMatch = (objectDisplayName == toolDisplayName) || 
+                                          (targetObjectName != null && objectName == targetObjectName);
+
+                            if (isMatch)
                             {
                                 // Check if this tool has storage before trying to refill
                                 FieldInfo baseStorageField = null;
-                                Type currentType = obj.GetType();
+                                Type currentType = toolItem.GetType();
 
                                 while (currentType != null && baseStorageField == null)
                                 {
@@ -555,18 +557,18 @@ namespace SilkSong.Services
 
                                 if (baseStorageField != null)
                                 {
-                                    int currentAmount = (int)baseStorageField.GetValue(obj);
+                                    int currentAmount = (int)baseStorageField.GetValue(toolItem);
 
                                     if (currentAmount > 0)
                                     {
                                         // Tool has storage, use CollectFree to refill ammo
-                                        Type toolType = obj.GetType();
+                                        Type toolType = toolItem.GetType();
                                         MethodInfo collectFreeMethod = toolType.GetMethod("CollectFree", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
                                         if (collectFreeMethod != null)
                                         {
-                                            collectFreeMethod.Invoke(obj, new object[] { 9999 });
-                                            logger.Log($"Refilled {toolDisplayName} ammo!");
+                                            collectFreeMethod.Invoke(toolItem, new object[] { 9999 });
+                                            logger.Log($"Refilled {toolDisplayName} ammo using ToolItemManager!");
                                             return true;
                                         }
                                         else
@@ -590,7 +592,7 @@ namespace SilkSong.Services
                         }
                         catch (Exception e)
                         {
-                            logger.Log($"Error processing tool {obj.name}: {e.Message}");
+                            logger.Log($"Error processing tool item {((UnityEngine.Object)toolItem).name}: {e.Message}");
                         }
                     }
                 }
@@ -600,13 +602,13 @@ namespace SilkSong.Services
             }
             catch (Exception e)
             {
-                logger.Log($"Error refilling ammo: {e.Message}");
-                return false;
+                logger.Log($"CRITICAL ERROR: Failed to refill ammo for {toolDisplayName}: {e.Message}");
+                throw; // Re-throw since we no longer have fallbacks
             }
         }
 
         /// <summary>
-        /// Checks if a tool at the specified index uses ammo.
+        /// Checks if a tool at the specified index uses ammo using ToolItemManager.toolItems.
         /// </summary>
         public bool SelectedToolUsesAmmo(int selectedToolIndex)
         {
@@ -622,60 +624,74 @@ namespace SilkSong.Services
             {
                 string selectedTool = toolNames[selectedToolIndex];
 
-                // Check ToolItemSkill objects FIRST - they never use ammo
-                UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
-
-                foreach (UnityEngine.Object obj in skillObjects)
+                // Get tools from ToolItemManager - this must work
+                var toolItems = GetToolItemsFromManager();
+                if (toolItems == null)
                 {
-                    if (obj != null)
-                    {
-                        string objectDisplayName = GetToolDisplayName(obj);
-
-                        if (objectDisplayName == selectedTool)
-                        {
-                            // ToolItemSkill objects don't use ammo (they're skills, not consumables)
-                            lastAmmoCheckToolIndex = selectedToolIndex;
-                            lastAmmoCheckResult = false;
-                            return false;
-                        }
-                    }
+                    throw new InvalidOperationException($"Failed to get toolItems from ToolItemManager for ammo checking on {selectedTool}");
                 }
 
-                // Then check ToolItemBasic objects
-                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
-
-                foreach (UnityEngine.Object obj in allObjects)
+                foreach (var toolItem in toolItems)
                 {
-                    if (obj != null)
+                    if (toolItem != null)
                     {
-                        string objectDisplayName = GetToolDisplayName(obj);
+                        string objectName = ((UnityEngine.Object)toolItem).name;
+                        string objectDisplayName = GetToolDisplayName(toolItem as UnityEngine.Object);
 
-                        if (objectDisplayName == selectedTool)
+                        // Get the actual object name from our mapping (for cases like "Silkshot (WebShot Architect)" -> "WebShot Architect")
+                        string targetObjectName = null;
+                        if (toolDisplayNameToObjectName.ContainsKey(selectedTool))
                         {
-                            // Check if tool has baseStorageAmount > 0
-                            FieldInfo baseStorageField = null;
-                            Type currentType = obj.GetType();
+                            targetObjectName = toolDisplayNameToObjectName[selectedTool];
+                        }
 
-                            while (currentType != null && baseStorageField == null)
-                            {
-                                baseStorageField = currentType.GetField("baseStorageAmount",
-                                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                                currentType = currentType.BaseType;
-                            }
+                        // Match either by display name directly OR by object name (for unique variants)
+                        bool isMatch = (objectDisplayName == selectedTool) || 
+                                      (targetObjectName != null && objectName == targetObjectName);
 
-                            if (baseStorageField != null)
+                        if (isMatch)
+                        {
+                            string typeName = toolItem.GetType().Name;
+                            
+                            // ToolItemSkill objects don't use ammo (they're skills, not consumables)
+                            if (typeName == "ToolItemSkill")
                             {
-                                int currentAmount = (int)baseStorageField.GetValue(obj);
-                                bool hasAmmo = currentAmount > 0;
                                 lastAmmoCheckToolIndex = selectedToolIndex;
-                                lastAmmoCheckResult = hasAmmo;
-                                return hasAmmo; // Tool uses ammo if storage > 0
+                                lastAmmoCheckResult = false;
+                                return false;
+                            }
+                            
+                            // ToolItemBasic objects might use ammo if they have storage > 0
+                            if (typeName == "ToolItemBasic")
+                            {
+                                // Check if tool has baseStorageAmount > 0
+                                FieldInfo baseStorageField = null;
+                                Type currentType = toolItem.GetType();
+
+                                while (currentType != null && baseStorageField == null)
+                                {
+                                    baseStorageField = currentType.GetField("baseStorageAmount",
+                                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                                    currentType = currentType.BaseType;
+                                }
+
+                                if (baseStorageField != null)
+                                {
+                                    int currentAmount = (int)baseStorageField.GetValue(toolItem);
+                                    bool hasAmmo = currentAmount > 0;
+                                    lastAmmoCheckToolIndex = selectedToolIndex;
+                                    lastAmmoCheckResult = hasAmmo;
+                                    return hasAmmo; // Tool uses ammo if storage > 0
+                                }
                             }
                         }
                     }
                 }
             }
-            catch { }
+            catch (Exception e)
+            {
+                logger.Log($"Error checking ammo for tool index {selectedToolIndex}: {e.Message}");
+            }
 
             // Cache the result
             lastAmmoCheckToolIndex = selectedToolIndex;
@@ -684,7 +700,7 @@ namespace SilkSong.Services
         }
 
         /// <summary>
-        /// Gets the current storage amount for a tool at the specified index.
+        /// Gets the current storage amount for a tool at the specified index using ToolItemManager.toolItems.
         /// </summary>
         public int GetSelectedToolCurrentStorage(int selectedToolIndex)
         {
@@ -699,52 +715,37 @@ namespace SilkSong.Services
             try
             {
                 string selectedTool = toolNames[selectedToolIndex];
-                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemBasic));
 
-                foreach (UnityEngine.Object obj in allObjects)
+                // Get tools from ToolItemManager - this must work
+                var toolItems = GetToolItemsFromManager();
+                if (toolItems == null)
                 {
-                    if (obj != null)
-                    {
-                        string objectDisplayName = GetToolDisplayName(obj);
-
-                        if (objectDisplayName == selectedTool)
-                        {
-                            // Get current baseStorageAmount value
-                            FieldInfo baseStorageField = null;
-                            Type currentType = obj.GetType();
-
-                            while (currentType != null && baseStorageField == null)
-                            {
-                                baseStorageField = currentType.GetField("baseStorageAmount",
-                                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                                currentType = currentType.BaseType;
-                            }
-
-                            if (baseStorageField != null)
-                            {
-                                int result = (int)baseStorageField.GetValue(obj);
-                                lastStorageCheckToolIndex = selectedToolIndex;
-                                lastStorageCheckResult = result;
-                                return result;
-                            }
-                        }
-                    }
+                    throw new InvalidOperationException($"Failed to get toolItems from ToolItemManager for storage checking on {selectedTool}");
                 }
 
-                // Also check ToolItemSkill objects
-                UnityEngine.Object[] skillObjects = Resources.FindObjectsOfTypeAll(typeof(ToolItemSkill));
-
-                foreach (UnityEngine.Object obj in skillObjects)
+                foreach (var toolItem in toolItems)
                 {
-                    if (obj != null)
+                    if (toolItem != null)
                     {
-                        string objectDisplayName = GetToolDisplayName(obj);
+                        string objectName = ((UnityEngine.Object)toolItem).name;
+                        string objectDisplayName = GetToolDisplayName(toolItem as UnityEngine.Object);
 
-                        if (objectDisplayName == selectedTool)
+                        // Get the actual object name from our mapping (for cases like "Silkshot (WebShot Architect)" -> "WebShot Architect")
+                        string targetObjectName = null;
+                        if (toolDisplayNameToObjectName.ContainsKey(selectedTool))
+                        {
+                            targetObjectName = toolDisplayNameToObjectName[selectedTool];
+                        }
+
+                        // Match either by display name directly OR by object name (for unique variants)
+                        bool isMatch = (objectDisplayName == selectedTool) || 
+                                      (targetObjectName != null && objectName == targetObjectName);
+
+                        if (isMatch)
                         {
                             // Get current baseStorageAmount value
                             FieldInfo baseStorageField = null;
-                            Type currentType = obj.GetType();
+                            Type currentType = toolItem.GetType();
 
                             while (currentType != null && baseStorageField == null)
                             {
@@ -755,14 +756,14 @@ namespace SilkSong.Services
 
                             if (baseStorageField != null)
                             {
-                                int result = (int)baseStorageField.GetValue(obj);
+                                int result = (int)baseStorageField.GetValue(toolItem);
                                 lastStorageCheckToolIndex = selectedToolIndex;
                                 lastStorageCheckResult = result;
                                 return result;
                             }
                             else
                             {
-                                // ToolItemSkill without baseStorageAmount field = no storage
+                                // Tool without baseStorageAmount field = no storage (likely ToolItemSkill)
                                 lastStorageCheckToolIndex = selectedToolIndex;
                                 lastStorageCheckResult = 0;
                                 return 0;
@@ -771,7 +772,10 @@ namespace SilkSong.Services
                     }
                 }
             }
-            catch { }
+            catch (Exception e)
+            {
+                logger.Log($"Error getting storage for tool index {selectedToolIndex}: {e.Message}");
+            }
 
             lastStorageCheckToolIndex = selectedToolIndex;
             lastStorageCheckResult = 0;
@@ -1132,6 +1136,121 @@ namespace SilkSong.Services
             {
                 logger.Log($"Error unlocking map items: {e.Message}");
                 return 0;
+            }
+        }
+
+        /// <summary>
+        /// Helper method to get toolItems from ToolItemManager.
+        /// </summary>
+        private System.Collections.IEnumerable GetToolItemsFromManager()
+        {
+            try
+            {
+                // Find ToolItemManager and get its toolItems list
+                Type toolItemManagerType = FindTypeInAssemblies("ToolItemManager");
+                if (toolItemManagerType == null)
+                {
+                    logger.Log("ToolItemManager type not found in assemblies");
+                    return null;
+                }
+
+                // Found ToolItemManager type
+
+                // Try multiple approaches to get the instance
+                object toolItemManagerInstance = null;
+
+                // Try multiple approaches to get the instance
+                PropertyInfo instanceProperty = toolItemManagerType.GetProperty("instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+                if (instanceProperty != null)
+                {
+                    toolItemManagerInstance = instanceProperty.GetValue(null);
+                }
+
+                if (toolItemManagerInstance == null)
+                {
+                    instanceProperty = toolItemManagerType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+                    if (instanceProperty != null)
+                    {
+                        toolItemManagerInstance = instanceProperty.GetValue(null);
+                    }
+                }
+
+                if (toolItemManagerInstance == null)
+                {
+                    FieldInfo instanceField = toolItemManagerType.GetField("instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+                    if (instanceField != null)
+                    {
+                        toolItemManagerInstance = instanceField.GetValue(null);
+                    }
+                }
+
+                if (toolItemManagerInstance == null)
+                {
+                    var findObjectMethod = typeof(UnityEngine.Object).GetMethod("FindObjectOfType", new Type[0]);
+                    if (findObjectMethod != null)
+                    {
+                        var genericMethod = findObjectMethod.MakeGenericMethod(toolItemManagerType);
+                        toolItemManagerInstance = genericMethod.Invoke(null, null);
+                    }
+                }
+
+                if (toolItemManagerInstance == null)
+                {
+                    var findObjectsMethod = typeof(Resources).GetMethod("FindObjectsOfTypeAll", new Type[] { typeof(Type) });
+                    if (findObjectsMethod != null)
+                    {
+                        var objects = (UnityEngine.Object[])findObjectsMethod.Invoke(null, new object[] { toolItemManagerType });
+                        if (objects != null && objects.Length > 0)
+                        {
+                            toolItemManagerInstance = objects[0];
+                        }
+                    }
+                }
+
+                if (toolItemManagerInstance == null)
+                {
+                    logger.Log("Could not find ToolItemManager instance using any method");
+                    return null;
+                }
+
+                // Get the toolItems field (it's a [SerializeField] private ToolItemList toolItems)
+                FieldInfo toolItemsField = toolItemManagerType.GetField("toolItems", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                
+                if (toolItemsField != null)
+                {
+                    object toolItemsList = toolItemsField.GetValue(toolItemManagerInstance);
+                    
+                    if (toolItemsList != null)
+                    {
+                        // ToolItemList inherits from NamedScriptableObjectList<ToolItem>
+                        // The actual list is accessed via base.List property
+                        Type toolItemListType = toolItemsList.GetType();
+                        PropertyInfo listProperty = null;
+                        Type currentType = toolItemListType;
+                        
+                        // Look for List property in the inheritance hierarchy
+                        while (currentType != null && listProperty == null)
+                        {
+                            listProperty = currentType.GetProperty("List", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                            currentType = currentType.BaseType;
+                        }
+                        
+                        if (listProperty != null)
+                        {
+                            toolItemsList = listProperty.GetValue(toolItemsList);
+                            return toolItemsList as System.Collections.IEnumerable;
+                        }
+                    }
+                }
+
+                logger.Log("Failed to access ToolItemManager.toolItems");
+                return null;
+            }
+            catch (Exception e)
+            {
+                logger.Log($"Error getting toolItems from ToolItemManager: {e.Message}");
+                logger.Log($"Stack trace: {e.StackTrace}");
+                return null;
             }
         }
 

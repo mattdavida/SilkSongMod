@@ -40,6 +40,7 @@ namespace SilkSong.UserInterface
         private bool rainbow2Active = false;
         private bool goldShadowActive = false;
         private bool redShadowActive = false;
+        private bool includeAllSceneComponents = false;
         private bool showCollectibleItems = false;
         private bool showCrestTools = false;
         private bool showPlayerSkills = false;
@@ -139,6 +140,18 @@ namespace SilkSong.UserInterface
                 if (newGameSpeed != context.GameStateService.IsGameSpeedEnabled)
                 {
                     context.GameStateService.ToggleGameSpeed(onToast, onToast);
+                }
+
+                bool newInfiniteToolUse = GUILayout.Toggle(context.GameStateService.IsInfiniteToolUseEnabled, "Infinite Tool Use");
+                if (newInfiniteToolUse != context.GameStateService.IsInfiniteToolUseEnabled)
+                {
+                    context.GameStateService.ToggleInfiniteToolUse(onToast, onToast);
+                }
+
+                bool newQuickAttacks = GUILayout.Toggle(context.GameStateService.IsQuickAttacksEnabled, "Quick Attacks");
+                if (newQuickAttacks != context.GameStateService.IsQuickAttacksEnabled)
+                {
+                    context.GameStateService.ToggleQuickAttacks(onToast, onToast);
                 }
 
                 // Change Equipment Anywhere toggle
@@ -268,6 +281,50 @@ namespace SilkSong.UserInterface
             {
                 GUILayout.BeginVertical(GUI.skin.box);
                 
+                // Scene-wide color toggle
+                GUILayout.BeginHorizontal();
+                bool newIncludeAllScene = GUILayout.Toggle(includeAllSceneComponents, "Include All Scene Components");
+                if (newIncludeAllScene != includeAllSceneComponents)
+                {
+                    includeAllSceneComponents = newIncludeAllScene;
+                    
+                    // Immediately apply/remove scene colors based on toggle state
+                    bool hasActiveColor = context.HeroInspectorService.CurrentDressColor.HasValue || 
+                                        fireActive || iceActive || shadowActive || rainbow1Active || rainbow2Active ||
+                                        goldShadowActive || redShadowActive || redActive || blueActive || 
+                                        greenActive || purpleActive || goldActive;
+                    
+                    if (hasActiveColor)
+                    {
+                        if (includeAllSceneComponents)
+                        {
+                            // Toggle turned ON - apply appropriate scene color
+                            Color sceneColor = GetCurrentSceneColor(context);
+                            context.HeroInspectorService.ChangeAllSceneSpriteColors(sceneColor, 
+                                success => { /* Silent success */ },
+                                error => onToast($"Scene color error: {error}"));
+                            onToast($"Scene-wide coloring: Enabled (applied current effect)");
+                        }
+                        else
+                        {
+                            // Toggle turned OFF - reset scene to white/default
+                            context.HeroInspectorService.ChangeAllSceneSpriteColors(Color.white, 
+                                success => { /* Silent success */ },
+                                error => onToast($"Scene reset error: {error}"));
+                            onToast($"Scene-wide coloring: Disabled (scene reset to default)");
+                        }
+                    }
+                    else
+                    {
+                        // No active color
+                        string status = includeAllSceneComponents ? "Enabled" : "Disabled";
+                        onToast($"Scene-wide coloring: {status}");
+                    }
+                }
+                GUILayout.EndHorizontal();
+                
+                GUILayout.Space(5);
+                
                 if (context.HeroInspectorService != null)
                 {
                     // Red and Blue
@@ -276,13 +333,13 @@ namespace SilkSong.UserInterface
                     if (GUILayout.Button("Red"))
                     {
                         SetActiveColor("red");
-                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.2f, 0.2f, 1f), onToast, onToast);
+                        ApplyColorWithOptionalSceneWide(context, new Color(1f, 0.2f, 0.2f, 1f), onToast);
                     }
                     GUI.backgroundColor = blueActive ? Color.green : Color.white;
                     if (GUILayout.Button("Blue"))
                     {
                         SetActiveColor("blue");
-                        context.HeroInspectorService.ChangeDressColor(new Color(0.2f, 0.2f, 1f, 1f), onToast, onToast);
+                        ApplyColorWithOptionalSceneWide(context, new Color(0.2f, 0.2f, 1f, 1f), onToast);
                     }
                     GUI.backgroundColor = Color.white;
                     GUILayout.EndHorizontal();
@@ -293,13 +350,13 @@ namespace SilkSong.UserInterface
                     if (GUILayout.Button("Green"))
                     {
                         SetActiveColor("green");
-                        context.HeroInspectorService.ChangeDressColor(new Color(0.2f, 1f, 0.2f, 1f), onToast, onToast);
+                        ApplyColorWithOptionalSceneWide(context, new Color(0.2f, 1f, 0.2f, 1f), onToast);
                     }
                     GUI.backgroundColor = purpleActive ? Color.green : Color.white;
                     if (GUILayout.Button("Purple"))
                     {
                         SetActiveColor("purple");
-                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.2f, 1f, 1f), onToast, onToast);
+                        ApplyColorWithOptionalSceneWide(context, new Color(1f, 0.2f, 1f, 1f), onToast);
                     }
                     GUI.backgroundColor = Color.white;
                     GUILayout.EndHorizontal();
@@ -310,18 +367,20 @@ namespace SilkSong.UserInterface
                     if (GUILayout.Button("Gold"))
                     {
                         SetActiveColor("gold");
-                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.8f, 0.2f, 1f), onToast, onToast);
+                        ApplyColorWithOptionalSceneWide(context, new Color(1f, 0.8f, 0.2f, 1f), onToast);
                     }
                     GUI.backgroundColor = fireActive ? Color.green : Color.white;
                     if (GUILayout.Button("Fire"))
                     {
                         SetActiveColor("fire");
-                        // Set red base color + fire movement effects
-                        // context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.3f, 0.2f, 1f), null, null); // Red base
-                        context.HeroInspectorService.ChangeVertexColor(2, 0, Color.red, null, null);
-                        context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(1f, 0.5f, 0f, 1f), null, null); // Orange
-                        context.HeroInspectorService.ChangeVertexColor(2, 2, Color.yellow, null, null);
-                        context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(1f, 0.8f, 0f, 1f), null, null); // Gold
+                        ApplyComplexEffectWithOptionalSceneWide(context, () => {
+                            // Set fire base color + movement effects
+                            context.HeroInspectorService.ChangeDressColor(Color.red, null, null); // Establish base color
+                            context.HeroInspectorService.ChangeVertexColor(2, 0, Color.red, null, null);
+                            context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(1f, 0.5f, 0f, 1f), null, null); // Orange
+                            context.HeroInspectorService.ChangeVertexColor(2, 2, Color.yellow, null, null);
+                            context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(1f, 0.8f, 0f, 1f), null, null); // Gold
+                        }, Color.red, onToast);
                         onToast("Fire transformation!");
                     }
                     GUI.backgroundColor = Color.white;
@@ -333,24 +392,28 @@ namespace SilkSong.UserInterface
                     if (GUILayout.Button("Ice"))
                     {
                         SetActiveColor("ice");
-                        // Set blue base color + ice movement effects
-                        // context.HeroInspectorService.ChangeDressColor(new Color(0.3f, 0.7f, 1f, 1f), null, null); // Ice blue base
-                        context.HeroInspectorService.ChangeVertexColor(2, 0, Color.blue, null, null);
-                        context.HeroInspectorService.ChangeVertexColor(2, 1, Color.cyan, null, null);
-                        context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(0.7f, 0.9f, 1f, 1f), null, null); // Light blue
-                        context.HeroInspectorService.ChangeVertexColor(2, 3, Color.white, null, null);
+                        ApplyComplexEffectWithOptionalSceneWide(context, () => {
+                            // Set ice base color + movement effects
+                            context.HeroInspectorService.ChangeDressColor(Color.blue, null, null); // Establish base color
+                            context.HeroInspectorService.ChangeVertexColor(2, 0, Color.blue, null, null);
+                            context.HeroInspectorService.ChangeVertexColor(2, 1, Color.cyan, null, null);
+                            context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(0.7f, 0.9f, 1f, 1f), null, null); // Light blue
+                            context.HeroInspectorService.ChangeVertexColor(2, 3, Color.white, null, null);
+                        }, Color.blue, onToast);
                         onToast("Ice transformation!");
                     }
                     GUI.backgroundColor = shadowActive ? Color.green : Color.white;
                     if (GUILayout.Button("Shadow"))
                     {
                         SetActiveColor("shadow");
-                        // Set dark base color + shadow movement effects
-                        // context.HeroInspectorService.ChangeDressColor(new Color(0.2f, 0.2f, 0.3f, 1f), null, null); // Dark base
-                        context.HeroInspectorService.ChangeVertexColor(3, 0, new Color(0.2f, 0.2f, 0.2f, 1f), null, null);
-                        context.HeroInspectorService.ChangeVertexColor(3, 1, new Color(0.4f, 0.2f, 0.4f, 1f), null, null); // Dark purple
-                        context.HeroInspectorService.ChangeVertexColor(3, 2, new Color(0.2f, 0.2f, 0.4f, 1f), null, null); // Dark blue
-                        context.HeroInspectorService.ChangeVertexColor(3, 3, new Color(0.1f, 0.1f, 0.1f, 1f), null, null); // Almost black
+                        ApplyComplexEffectWithOptionalSceneWide(context, () => {
+                            // Set shadow base color + movement effects
+                            context.HeroInspectorService.ChangeDressColor(new Color(0.2f, 0.2f, 0.2f, 1f), null, null); // Establish base color
+                            context.HeroInspectorService.ChangeVertexColor(3, 0, new Color(0.2f, 0.2f, 0.2f, 1f), null, null);
+                            context.HeroInspectorService.ChangeVertexColor(3, 1, new Color(0.4f, 0.2f, 0.4f, 1f), null, null); // Dark purple
+                            context.HeroInspectorService.ChangeVertexColor(3, 2, new Color(0.2f, 0.2f, 0.4f, 1f), null, null); // Dark blue
+                            context.HeroInspectorService.ChangeVertexColor(3, 3, new Color(0.1f, 0.1f, 0.1f, 1f), null, null); // Almost black
+                        }, new Color(0.2f, 0.2f, 0.2f, 1f), onToast);
                         onToast("Shadow transformation!");
                     }
                     GUI.backgroundColor = Color.white;
@@ -362,24 +425,28 @@ namespace SilkSong.UserInterface
                     if (GUILayout.Button("Rainbow 1"))
                     {
                         SetActiveColor("rainbow1");
-                        // Set bright base color + electric movement effects
-                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 1f, 0.7f, 1f), null, null); // Bright yellow base
-                        context.HeroInspectorService.ChangeVertexColor(2, 0, new Color(1f, 1f, 0f, 1f), null, null); // Bright yellow
-                        context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(0f, 1f, 1f, 1f), null, null); // Bright cyan
-                        context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(1f, 0f, 1f, 1f), null, null); // Bright magenta
-                        context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(1.2f, 1.2f, 1.2f, 1f), null, null); // Super bright white
+                        ApplyComplexEffectWithOptionalSceneWide(context, () => {
+                            // Set bright base color + electric movement effects
+                            context.HeroInspectorService.ChangeDressColor(new Color(1f, 1f, 0.7f, 1f), null, null); // Bright yellow base
+                            context.HeroInspectorService.ChangeVertexColor(2, 0, new Color(1f, 1f, 0f, 1f), null, null); // Bright yellow
+                            context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(0f, 1f, 1f, 1f), null, null); // Bright cyan
+                            context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(1f, 0f, 1f, 1f), null, null); // Bright magenta
+                            context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(1.2f, 1.2f, 1.2f, 1f), null, null); // Super bright white
+                        }, new Color(0f, 1f, 1f, 1f), onToast); // Bright cyan for scene
                         onToast("Rainbow 1 transformation!");
                     }
                     GUI.backgroundColor = rainbow2Active ? Color.green : Color.white;
                     if (GUILayout.Button("Rainbow 2"))
                     {
                         SetActiveColor("rainbow2");
-                        // Set colorful base + rainbow movement effects
-                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.8f, 1f, 1f), null, null); // Light pink base
-                        context.HeroInspectorService.ChangeVertexColor(3, 0, Color.red, null, null);
-                        context.HeroInspectorService.ChangeVertexColor(3, 1, Color.green, null, null);
-                        context.HeroInspectorService.ChangeVertexColor(3, 2, Color.blue, null, null);
-                        context.HeroInspectorService.ChangeVertexColor(3, 3, Color.yellow, null, null);
+                        ApplyComplexEffectWithOptionalSceneWide(context, () => {
+                            // Set colorful base + rainbow movement effects
+                            context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.8f, 1f, 1f), null, null); // Light pink base
+                            context.HeroInspectorService.ChangeVertexColor(3, 0, Color.red, null, null);
+                            context.HeroInspectorService.ChangeVertexColor(3, 1, Color.green, null, null);
+                            context.HeroInspectorService.ChangeVertexColor(3, 2, Color.blue, null, null);
+                            context.HeroInspectorService.ChangeVertexColor(3, 3, Color.yellow, null, null);
+                        }, new Color(1f, 0f, 0.5f, 1f), onToast); // Hot pink for scene
                         onToast("Rainbow 2 transformation!");
                     }
                     GUI.backgroundColor = Color.white;
@@ -391,24 +458,28 @@ namespace SilkSong.UserInterface
                     if (GUILayout.Button("Gold Shadow"))
                     {
                         SetActiveColor("goldshadow");
-                        // Set yellow base color + black shadow pattern
-                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.9f, 0.2f, 1f), null, null); // Bright yellow base
-                        context.HeroInspectorService.ChangeVertexColor(2, 0, new Color(1f, 0.8f, 0f, 1f), null, null); // Golden yellow
-                        context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(0.2f, 0.2f, 0.1f, 1f), null, null); // Dark brown/black
-                        context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(0.8f, 0.7f, 0.1f, 1f), null, null); // Darker yellow
-                        context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(0.1f, 0.1f, 0.05f, 1f), null, null); // Black shadows
+                        ApplyComplexEffectWithOptionalSceneWide(context, () => {
+                            // Set yellow base color + black shadow pattern
+                            context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.9f, 0.2f, 1f), null, null); // Bright yellow base
+                            context.HeroInspectorService.ChangeVertexColor(2, 0, new Color(1f, 0.8f, 0f, 1f), null, null); // Golden yellow
+                            context.HeroInspectorService.ChangeVertexColor(2, 1, new Color(0.2f, 0.2f, 0.1f, 1f), null, null); // Dark brown/black
+                            context.HeroInspectorService.ChangeVertexColor(2, 2, new Color(0.8f, 0.7f, 0.1f, 1f), null, null); // Darker yellow
+                            context.HeroInspectorService.ChangeVertexColor(2, 3, new Color(0.1f, 0.1f, 0.05f, 1f), null, null); // Black shadows
+                        }, new Color(1f, 0.9f, 0.2f, 1f), onToast);
                         onToast("Gold Shadow transformation!");
                     }
                     GUI.backgroundColor = redShadowActive ? Color.green : Color.white;
                     if (GUILayout.Button("Red Shadow"))
                     {
                         SetActiveColor("redshadow");
-                        // Set orange base color + black shadow pattern
-                        context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.5f, 0.1f, 1f), null, null); // Bright orange base
-                        context.HeroInspectorService.ChangeVertexColor(3, 0, new Color(1f, 0.4f, 0f, 1f), null, null); // Deep orange
-                        context.HeroInspectorService.ChangeVertexColor(3, 1, new Color(0.1f, 0.1f, 0.1f, 1f), null, null); // Black shadows
-                        context.HeroInspectorService.ChangeVertexColor(3, 2, new Color(0.8f, 0.3f, 0f, 1f), null, null); // Darker orange
-                        context.HeroInspectorService.ChangeVertexColor(3, 3, new Color(0.05f, 0.05f, 0.05f, 1f), null, null); // Deep black shadows
+                        ApplyComplexEffectWithOptionalSceneWide(context, () => {
+                            // Set orange base color + black shadow pattern
+                            context.HeroInspectorService.ChangeDressColor(new Color(1f, 0.5f, 0.1f, 1f), null, null); // Bright orange base
+                            context.HeroInspectorService.ChangeVertexColor(3, 0, new Color(1f, 0.4f, 0f, 1f), null, null); // Deep orange
+                            context.HeroInspectorService.ChangeVertexColor(3, 1, new Color(0.1f, 0.1f, 0.1f, 1f), null, null); // Black shadows
+                            context.HeroInspectorService.ChangeVertexColor(3, 2, new Color(0.8f, 0.3f, 0f, 1f), null, null); // Darker orange
+                            context.HeroInspectorService.ChangeVertexColor(3, 3, new Color(0.05f, 0.05f, 0.05f, 1f), null, null); // Deep black shadows
+                        }, new Color(1f, 0.5f, 0.1f, 1f), onToast);
                         onToast("Red Shadow transformation!");
                     }
                     GUI.backgroundColor = Color.white;
@@ -419,17 +490,38 @@ namespace SilkSong.UserInterface
                     if (GUILayout.Button("Reset"))
                     {
                         ClearAllActiveColors();
-                        // Reset everything to default
-                        context.HeroInspectorService.ChangeDressColor(Color.white, null, null);
-                        for (int comp = 0; comp < 4; comp++)
+                        // Clear the color system entirely - this stops all persistence
+                        context.HeroInspectorService.ClearDressColor();
+                        
+                        // If scene-wide toggle is enabled, also reset all scene sprites to white/default
+                        if (includeAllSceneComponents)
                         {
-                            for (int vertex = 0; vertex < 4; vertex++)
-                            {
-                                context.HeroInspectorService.ChangeVertexColor(comp, vertex, Color.white, null, null);
-                            }
+                            context.HeroInspectorService.ChangeAllSceneSpriteColors(Color.white, 
+                                success => { /* Silent success for scene reset */ },
+                                error => onToast($"Scene reset error: {error}"));
+                            onToast("All effects reset to default (including scene sprites)");
                         }
-                        onToast("All effects reset to default");
+                        else
+                        {
+                            onToast("All effects reset to default");
+                        }
                     }
+                    
+                    // Experimental developer tool for testing current color on all scene sprites
+                    
+                    // if (GUILayout.Button("🧪 Test All Scene Sprites"))
+                    // {
+                    //     // Use currently active color, or white if no color is set
+                    //     Color testColor = context.HeroInspectorService.CurrentDressColor ?? Color.white;
+                    //     string colorName = context.HeroInspectorService.CurrentDressColor.HasValue ? 
+                    //         $"current color ({testColor})" : "white (no active color)";
+                            
+                    //     context.HeroInspectorService.ChangeAllSceneSpriteColors(testColor, 
+                    //         success => onToast($"Scene Test with {colorName}: {success}"),
+                    //         error => onToast($"Scene Test Failed: {error}"));
+                    // }
+                    
+                    
                     GUILayout.EndHorizontal();
                 }
                 else
@@ -533,6 +625,38 @@ namespace SilkSong.UserInterface
                     GUILayout.BeginHorizontal();
                     GUILayout.Label("Amount:", GUILayout.Width(80));
                     collectableAmount = GUILayout.TextField(collectableAmount, GUILayout.Width(60));
+                    if (GUILayout.Button("Add", GUILayout.Width(50)))
+                    {
+                        if (int.TryParse(collectableAmount, out int amount) && selectedCollectableIndex < collectableNames.Length)
+                        {
+                            string selectedCollectable = collectableNames[selectedCollectableIndex];
+                            bool success = context.CollectableService.AddCollectableAmount(selectedCollectable, amount, onToast, onToast);
+                            if (success)
+                            {
+                                showCollectableDropdown = false; // Close dropdown after action
+                            }
+                        }
+                        else
+                        {
+                            onToast("Invalid amount or no item selected!");
+                        }
+                    }
+                    if (GUILayout.Button("Take", GUILayout.Width(50)))
+                    {
+                        if (int.TryParse(collectableAmount, out int amount) && selectedCollectableIndex < collectableNames.Length)
+                        {
+                            string selectedCollectable = collectableNames[selectedCollectableIndex];
+                            bool success = context.CollectableService.TakeCollectableAmount(selectedCollectable, amount, onToast, onToast);
+                            if (success)
+                            {
+                                showCollectableDropdown = false; // Close dropdown after action
+                            }
+                        }
+                        else
+                        {
+                            onToast("Invalid amount or no item selected!");
+                        }
+                    }
                     if (GUILayout.Button("Set", GUILayout.Width(50)))
                     {
                         if (int.TryParse(collectableAmount, out int amount) && selectedCollectableIndex < collectableNames.Length)
@@ -1199,6 +1323,59 @@ namespace SilkSong.UserInterface
             filteredCollectableNames = context.CollectableService.FilterCollectables(collectableSearchFilter);
         }
 
+        /// <summary>
+        /// Applies color change and optionally includes all scene components based on toggle state.
+        /// </summary>
+        private void ApplyColorWithOptionalSceneWide(GuiContext context, Color color, System.Action<string> onToast)
+        {
+            // Always apply to hero first
+            context.HeroInspectorService.ChangeDressColor(color, onToast, onToast);
+            context.HeroInspectorService.CaptureCurrentColorState();
+            
+            // If toggle is enabled, also apply to all scene sprites
+            if (includeAllSceneComponents)
+            {
+                context.HeroInspectorService.ChangeAllSceneSpriteColors(color, 
+                    success => { /* Silent success for scene-wide */ },
+                    error => onToast($"Scene-wide error: {error}"));
+            }
+        }
+
+        /// <summary>
+        /// Applies complex vertex color effects and optionally includes all scene components.
+        /// </summary>
+        private void ApplyComplexEffectWithOptionalSceneWide(GuiContext context, System.Action applyVertexColors, Color baseColor, System.Action<string> onToast)
+        {
+            // Always apply vertex colors to hero first
+            applyVertexColors();
+            context.HeroInspectorService.CaptureCurrentColorState();
+            
+            // If toggle is enabled, also apply base color to all scene sprites
+            if (includeAllSceneComponents)
+            {
+                context.HeroInspectorService.ChangeAllSceneSpriteColors(baseColor, 
+                    success => { /* Silent success for scene-wide */ },
+                    error => onToast($"Scene-wide error: {error}"));
+            }
+        }
+
+        /// <summary>
+        /// Gets the appropriate scene color for the currently active color effect.
+        /// </summary>
+        private Color GetCurrentSceneColor(GuiContext context)
+        {
+            // Map active color effects to their scene colors
+            if (fireActive) return Color.red;
+            if (iceActive) return Color.blue;
+            if (shadowActive) return new Color(0.2f, 0.2f, 0.2f, 1f);
+            if (rainbow1Active) return new Color(0f, 1f, 1f, 1f); // Bright cyan
+            if (rainbow2Active) return new Color(1f, 0f, 0.5f, 1f); // Hot pink
+            if (goldShadowActive) return new Color(1f, 0.9f, 0.2f, 1f);
+            if (redShadowActive) return new Color(1f, 0.5f, 0.1f, 1f);
+            
+            // For simple colors or if no flags are set, use the stored hero color
+            return context.HeroInspectorService.CurrentDressColor ?? Color.white;
+        }
 
         #endregion
     }

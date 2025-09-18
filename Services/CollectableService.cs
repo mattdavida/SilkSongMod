@@ -65,17 +65,23 @@ namespace SilkSong.Services
 
             try
             {
-                // Find all CollectableItemBasic objects specifically (they have displayName)
-                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(CollectableItemBasic));
-                foreach (UnityEngine.Object obj in allObjects)
+                // Get collectables from CollectableItemManager.masterList - this must work
+                var collectableItemsEnumerable = GetCollectableItemsFromManager();
+                if (collectableItemsEnumerable == null)
                 {
-                    if (obj != null)
+                    throw new InvalidOperationException("Failed to get masterList from CollectableItemManager - this is required for proper collectable scanning");
+                }
+
+                int processedCount = 0;
+                foreach (var collectableItem in collectableItemsEnumerable)
+                {
+                    if (collectableItem != null)
                     {
                         try
                         {
-                            Type itemType = obj.GetType();
+                            Type itemType = collectableItem.GetType();
                             string displayName = "";
-                            string objectName = obj.name.Replace("(Clone)", "").Trim();
+                            string objectName = ((UnityEngine.Object)collectableItem).name.Replace("(Clone)", "").Trim();
 
                             // Try GetDisplayName method first (most reliable for CollectableItemBasic)
                             MethodInfo getDisplayNameMethod = itemType.GetMethod("GetDisplayName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -96,7 +102,7 @@ namespace SilkSong.Services
                                         }
                                     }
 
-                                    object result = getDisplayNameMethod.Invoke(obj, new object[] { readSourceValue });
+                                    object result = getDisplayNameMethod.Invoke(collectableItem, new object[] { readSourceValue });
                                     if (result != null && !string.IsNullOrEmpty(result.ToString().Trim()))
                                     {
                                         displayName = result.ToString().Trim();
@@ -114,30 +120,45 @@ namespace SilkSong.Services
                                 displayName = objectName;
                             }
 
-                            // Add if valid, not duplicate, and not a placeholder/invalid name
-                            if (!string.IsNullOrEmpty(displayName) &&
-                                !availableCollectables.Contains(displayName) &&
-                                !IsInvalidDisplayName(displayName))
+                            // Add if valid and not a placeholder/invalid name
+                            if (!string.IsNullOrEmpty(displayName) && !IsInvalidDisplayName(displayName))
                             {
-                                availableCollectables.Add(displayName);
-                                displayNameToObjectName[displayName] = objectName;
+                                // Handle duplicate display names by making them unique
+                                string uniqueDisplayName = displayName;
+                                if (availableCollectables.Contains(displayName))
+                                {
+                                    // Make it unique by appending the object name in parentheses
+                                    uniqueDisplayName = $"{displayName} ({objectName})";
+                                }
+                                
+                                availableCollectables.Add(uniqueDisplayName);
+                                displayNameToObjectName[uniqueDisplayName] = objectName;
+                                processedCount++;
                             }
                         }
                         catch (Exception e)
                         {
-                            logger.Log($"Error processing collectable {obj.name}: {e.Message}");
+                            logger.Log($"Error processing collectable {((UnityEngine.Object)collectableItem).name}: {e.Message}");
                         }
                     }
+                }
+
+                // If we didn't find collectables, something is wrong
+                if (availableCollectables.Count == 0)
+                {
+                    throw new InvalidOperationException("No collectables found in CollectableItemManager.masterList - this indicates a problem with the collectable scanning");
                 }
 
                 // Sort alphabetically for better UX
                 availableCollectables.Sort();
                 collectablesScanned = true;
-                logger.Log($"Scanned {availableCollectables.Count} collectables");
+                logger.Log($"Collectable scanning complete using CollectableItemManager.masterList. Found {availableCollectables.Count} collectables from {processedCount} processed items");
             }
             catch (Exception e)
             {
-                logger.Log($"Error scanning collectables: {e.Message}");
+                logger.Log($"CRITICAL ERROR: Collectable scanning failed: {e.Message}");
+                logger.Log($"Stack trace: {e.StackTrace}");
+                throw; // Re-throw the exception since we no longer have fallbacks
             }
         }
 
@@ -165,15 +186,19 @@ namespace SilkSong.Services
                     actualObjectName = collectableDisplayName;
                 }
 
-                // Find the CollectableItemBasic object
-                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(CollectableItemBasic));
-
-                foreach (UnityEngine.Object obj in allObjects)
+                // Get collectables from CollectableItemManager - this must work
+                var collectableItems = GetCollectableItemsFromManager();
+                if (collectableItems == null)
                 {
-                    if (obj == null) continue;
+                    throw new InvalidOperationException($"Failed to get masterList from CollectableItemManager for setting amount on {collectableDisplayName}");
+                }
+
+                foreach (var collectableItem in collectableItems)
+                {
+                    if (collectableItem == null) continue;
 
                     // Check if this is the collectable we're looking for
-                    string objName = obj.name.Replace("(Clone)", "").Trim();
+                    string objName = ((UnityEngine.Object)collectableItem).name.Replace("(Clone)", "").Trim();
                     if (objName == actualObjectName)
                     {
                         try
@@ -201,12 +226,12 @@ namespace SilkSong.Services
                                             if (removeItemMethod != null && addItemMethod != null)
                                             {
                                                 // First, remove a large amount to clear current inventory (the method has bounds checking)
-                                                removeItemMethod.Invoke(managerInstance, new object[] { obj, 9999 });
+                                                removeItemMethod.Invoke(managerInstance, new object[] { collectableItem, 9999 });
 
                                                 // Then add the exact amount we want
                                                 if (amount > 0)
                                                 {
-                                                    addItemMethod.Invoke(managerInstance, new object[] { obj, amount });
+                                                    addItemMethod.Invoke(managerInstance, new object[] { collectableItem, amount });
                                                 }
 
                                                 onSuccess?.Invoke($"Set {collectableDisplayName} to {amount}");
@@ -218,7 +243,7 @@ namespace SilkSong.Services
                                                 MethodInfo publicAddItemMethod = managerType.GetMethod("AddItem", BindingFlags.Public | BindingFlags.Static);
                                                 if (publicAddItemMethod != null)
                                                 {
-                                                    publicAddItemMethod.Invoke(null, new object[] { obj, amount });
+                                                    publicAddItemMethod.Invoke(null, new object[] { collectableItem, amount });
                                                     onSuccess?.Invoke($"Added {amount} {collectableDisplayName} (note: adds to current amount)");
                                                     return true;
                                                 }
@@ -229,7 +254,7 @@ namespace SilkSong.Services
                             }
 
                             // Direct reflection fallback if manager approach fails
-                            Type itemType = obj.GetType();
+                            Type itemType = collectableItem.GetType();
 
                             // Try to directly set the amount field
                             FieldInfo currentAmountField = itemType.GetField("currentAmount", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -240,7 +265,7 @@ namespace SilkSong.Services
 
                             if (currentAmountField != null && currentAmountField.FieldType == typeof(int))
                             {
-                                currentAmountField.SetValue(obj, amount);
+                                currentAmountField.SetValue(collectableItem, amount);
                                 onSuccess?.Invoke($"Set {collectableDisplayName} to {amount} (direct field access)");
                                 return true;
                             }
@@ -249,14 +274,14 @@ namespace SilkSong.Services
                             PropertyInfo amountProperty = itemType.GetProperty("amount", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                             if (amountProperty != null && amountProperty.PropertyType == typeof(int) && amountProperty.CanWrite)
                             {
-                                amountProperty.SetValue(obj, amount);
+                                amountProperty.SetValue(collectableItem, amount);
                                 onSuccess?.Invoke($"Set {collectableDisplayName} to {amount} (direct property access)");
                                 return true;
                             }
                         }
                         catch (Exception e)
                         {
-                            logger.Log($"Error setting amount for {obj.name}: {e.Message}");
+                            logger.Log($"Error setting amount for {((UnityEngine.Object)collectableItem).name}: {e.Message}");
                         }
                     }
                 }
@@ -273,6 +298,198 @@ namespace SilkSong.Services
         }
 
         /// <summary>
+        /// Adds a specific amount of a collectable using the Collect method.
+        /// </summary>
+        /// <param name="collectableDisplayName">Display name of the collectable</param>
+        /// <param name="amount">Amount to collect</param>
+        /// <param name="onSuccess">Callback for success messages</param>
+        /// <param name="onError">Callback for error messages</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool AddCollectableAmount(string collectableDisplayName, int amount, Action<string> onSuccess = null, Action<string> onError = null)
+        {
+            try
+            {
+                // Get the actual object name from the display name
+                string actualObjectName = "";
+                if (displayNameToObjectName.ContainsKey(collectableDisplayName))
+                {
+                    actualObjectName = displayNameToObjectName[collectableDisplayName];
+                }
+                else
+                {
+                    // Fallback: treat as object name if no mapping found
+                    actualObjectName = collectableDisplayName;
+                }
+
+                // Get collectables from CollectableItemManager - this must work
+                var collectableItems = GetCollectableItemsFromManager();
+                if (collectableItems == null)
+                {
+                    throw new InvalidOperationException($"Failed to get masterList from CollectableItemManager for collecting {collectableDisplayName}");
+                }
+
+                foreach (var collectableItem in collectableItems)
+                {
+                    if (collectableItem == null) continue;
+
+                    // Check if this is the collectable we're looking for
+                    string objName = ((UnityEngine.Object)collectableItem).name.Replace("(Clone)", "").Trim();
+                    if (objName == actualObjectName)
+                    {
+                        try
+                        {
+                            Type itemType = collectableItem.GetType();
+                            string typeName = itemType.Name;
+
+                            // Look for Collect method with signature: Collect(int, bool)
+                            MethodInfo collectMethod = itemType.GetMethod("Collect", 
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                                null,
+                                new Type[] { typeof(int), typeof(bool) },
+                                null);
+
+                            if (collectMethod != null)
+                            {
+                                logger.Log($"Calling Collect({amount}, true) on {typeName} instance: {objName}");
+                                
+                                // Call Collect(int amount, bool showCounter) - passing true to show counter
+                                collectMethod.Invoke(collectableItem, new object[] { amount, true });
+                                
+                                onSuccess?.Invoke($"Collected {amount} {collectableDisplayName} (type: {typeName})");
+                                return true;
+                            }
+                            else
+                            {
+                                // Try to find any Collect method for debugging
+                                MethodInfo[] allCollectMethods = itemType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                                    .Where(m => m.Name == "Collect").ToArray();
+                                
+                                string methodInfo = allCollectMethods.Length > 0 
+                                    ? $"Found {allCollectMethods.Length} Collect methods: {string.Join(", ", allCollectMethods.Select(m => $"{m.Name}({string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name))})"))})"
+                                    : "No Collect methods found";
+                                
+                                onError?.Invoke($"Collect(int, bool) method not found for {collectableDisplayName} (type: {typeName}). {methodInfo}");
+                                logger.Log($"Collect method not found for {typeName}: {methodInfo}");
+                                return false;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Log($"Error collecting {((UnityEngine.Object)collectableItem).name}: {e.Message}");
+                            onError?.Invoke($"Error collecting {collectableDisplayName}: {e.Message}");
+                            return false;
+                        }
+                    }
+                }
+
+                onError?.Invoke($"Could not find {collectableDisplayName} for collecting");
+                return false;
+            }
+            catch (Exception e)
+            {
+                logger.Log($"CRITICAL ERROR: Failed to collect {collectableDisplayName}: {e.Message}");
+                onError?.Invoke($"Critical error collecting {collectableDisplayName}: {e.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Takes (removes) a specific amount of a collectable using the Take method.
+        /// </summary>
+        /// <param name="collectableDisplayName">Display name of the collectable</param>
+        /// <param name="amount">Amount to take</param>
+        /// <param name="onSuccess">Callback for success messages</param>
+        /// <param name="onError">Callback for error messages</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool TakeCollectableAmount(string collectableDisplayName, int amount, Action<string> onSuccess = null, Action<string> onError = null)
+        {
+            try
+            {
+                // Get the actual object name from the display name
+                string actualObjectName = "";
+                if (displayNameToObjectName.ContainsKey(collectableDisplayName))
+                {
+                    actualObjectName = displayNameToObjectName[collectableDisplayName];
+                }
+                else
+                {
+                    // Fallback: treat as object name if no mapping found
+                    actualObjectName = collectableDisplayName;
+                }
+
+                // Get collectables from CollectableItemManager - this must work
+                var collectableItems = GetCollectableItemsFromManager();
+                if (collectableItems == null)
+                {
+                    throw new InvalidOperationException($"Failed to get masterList from CollectableItemManager for taking {collectableDisplayName}");
+                }
+
+                foreach (var collectableItem in collectableItems)
+                {
+                    if (collectableItem == null) continue;
+
+                    // Check if this is the collectable we're looking for
+                    string objName = ((UnityEngine.Object)collectableItem).name.Replace("(Clone)", "").Trim();
+                    if (objName == actualObjectName)
+                    {
+                        try
+                        {
+                            Type itemType = collectableItem.GetType();
+                            string typeName = itemType.Name;
+
+                            // Look for Take method with specific signature: Take(int, bool)
+                            MethodInfo takeMethod = itemType.GetMethod("Take", 
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                                null,
+                                new Type[] { typeof(int), typeof(bool) },
+                                null);
+
+                            if (takeMethod != null)
+                            {
+                                logger.Log($"Calling Take({amount}, true) on {typeName} instance: {objName}");
+                                
+                                // Call Take(int amount, bool showCounter) - passing true to show counter
+                                takeMethod.Invoke(collectableItem, new object[] { amount, true });
+                                
+                                onSuccess?.Invoke($"Took {amount} {collectableDisplayName} (type: {typeName})");
+                                return true;
+                            }
+                            else
+                            {
+                                // Try to find any Take method for debugging
+                                MethodInfo[] allTakeMethods = itemType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                                    .Where(m => m.Name == "Take").ToArray();
+                                
+                                string methodInfo = allTakeMethods.Length > 0 
+                                    ? $"Found {allTakeMethods.Length} Take methods: {string.Join(", ", allTakeMethods.Select(m => $"{m.Name}({string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name))})"))})"
+                                    : "No Take methods found";
+                                
+                                onError?.Invoke($"Take(int, bool) method not found for {collectableDisplayName} (type: {typeName}). {methodInfo}");
+                                logger.Log($"Take method not found for {typeName}: {methodInfo}");
+                                return false;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Log($"Error taking {((UnityEngine.Object)collectableItem).name}: {e.Message}");
+                            onError?.Invoke($"Error taking {collectableDisplayName}: {e.Message}");
+                            return false;
+                        }
+                    }
+                }
+
+                onError?.Invoke($"Could not find {collectableDisplayName} for taking");
+                return false;
+            }
+            catch (Exception e)
+            {
+                logger.Log($"CRITICAL ERROR: Failed to take {collectableDisplayName}: {e.Message}");
+                onError?.Invoke($"Critical error taking {collectableDisplayName}: {e.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Maximizes all collectables by adding 99 to each using their AddAmount method.
         /// </summary>
         /// <returns>Number of collectables that were successfully maxed</returns>
@@ -282,42 +499,50 @@ namespace SilkSong.Services
             {
                 logger.Log("=== MAXING ALL COLLECTABLES ===");
 
-                // Find all CollectableItem objects directly (base class with AddAmount method)
-                UnityEngine.Object[] allObjects = Resources.FindObjectsOfTypeAll(typeof(CollectableItem));
-                logger.Log($"Found {allObjects.Length} CollectableItem objects");
+                // Get collectables from CollectableItemManager - this must work
+                var collectableItems = GetCollectableItemsFromManager();
+                if (collectableItems == null)
+                {
+                    throw new InvalidOperationException("Failed to get masterList from CollectableItemManager for maxing collectables");
+                }
 
                 int maxedCount = 0;
 
-                foreach (UnityEngine.Object obj in allObjects)
+                foreach (var collectableItem in collectableItems)
                 {
-                    if (obj == null) continue;
+                    if (collectableItem == null) continue;
 
                     // Check if it's a CollectableItem (includes CollectableItemBasic subclasses)
                     try
                     {
-                        Type itemType = obj.GetType();
+                        string objName = ((UnityEngine.Object)collectableItem).name.Replace("(Clone)", "").Trim();
+                        Type itemType = collectableItem.GetType();
+
+                        // Special case: Growstone is a unique regenerating item - only give 0, not 99
+                        // essentially skipping this item. Users can add manually if they want.
+                        int targetAmount = (objName == "Growstone") ? 0 : 99;
 
                         // Look for AddAmount method (protected virtual, so need NonPublic flag)
                         MethodInfo addAmountMethod = itemType.GetMethod("AddAmount", BindingFlags.NonPublic | BindingFlags.Instance);
 
                         if (addAmountMethod != null)
                         {
-                            addAmountMethod.Invoke(obj, new object[] { 99 });
-                            logger.Log($"Added 99x {obj.name}");
+                            addAmountMethod.Invoke(collectableItem, new object[] { targetAmount });
+                            logger.Log($"Added {targetAmount}x {objName} {(objName == "Growstone" ? "(Manual Add)" : "")}");
                             maxedCount++;
                         }
                         else
                         {
-                            logger.Log($"No AddAmount method found on {obj.name} (type: {itemType.Name})");
+                            logger.Log($"No AddAmount method found on {objName} (type: {itemType.Name})");
                         }
                     }
                     catch (Exception e)
                     {
-                        logger.Log($"Error maxing {obj.name}: {e.Message}");
+                        logger.Log($"Error maxing {((UnityEngine.Object)collectableItem).name}: {e.Message}");
                     }
                 }
 
-                logger.Log($"Collectable Max: Added 99x to {maxedCount} collectables");
+                logger.Log($"Collectable Max: Added items to {maxedCount} collectables (Growstone: 1x, others: 99x)");
                 return maxedCount;
             }
             catch (Exception e)
@@ -375,6 +600,103 @@ namespace SilkSong.Services
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Helper method to get collectableItems from CollectableItemManager.masterList.
+        /// </summary>
+        private System.Collections.IEnumerable GetCollectableItemsFromManager()
+        {
+            try
+            {
+                // Find CollectableItemManager and get its masterList
+                Type collectableItemManagerType = FindTypeInAssemblies("CollectableItemManager");
+                if (collectableItemManagerType == null)
+                {
+                    logger.Log("CollectableItemManager type not found in assemblies");
+                    return null;
+                }
+
+                // Try multiple approaches to get the instance
+                object collectableItemManagerInstance = null;
+
+                // Try static instance property
+                PropertyInfo instanceProperty = collectableItemManagerType.GetProperty("instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+                if (instanceProperty != null)
+                {
+                    collectableItemManagerInstance = instanceProperty.GetValue(null);
+                }
+
+                if (collectableItemManagerInstance == null)
+                {
+                    instanceProperty = collectableItemManagerType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+                    if (instanceProperty != null)
+                    {
+                        collectableItemManagerInstance = instanceProperty.GetValue(null);
+                    }
+                }
+
+                if (collectableItemManagerInstance == null)
+                {
+                    FieldInfo instanceField = collectableItemManagerType.GetField("instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+                    if (instanceField != null)
+                    {
+                        collectableItemManagerInstance = instanceField.GetValue(null);
+                    }
+                }
+
+                if (collectableItemManagerInstance == null)
+                {
+                    var findObjectMethod = typeof(UnityEngine.Object).GetMethod("FindObjectOfType", new Type[0]);
+                    if (findObjectMethod != null)
+                    {
+                        var genericMethod = findObjectMethod.MakeGenericMethod(collectableItemManagerType);
+                        collectableItemManagerInstance = genericMethod.Invoke(null, null);
+                    }
+                }
+
+                if (collectableItemManagerInstance == null)
+                {
+                    var findObjectsMethod = typeof(Resources).GetMethod("FindObjectsOfTypeAll", new Type[] { typeof(Type) });
+                    if (findObjectsMethod != null)
+                    {
+                        var objects = (UnityEngine.Object[])findObjectsMethod.Invoke(null, new object[] { collectableItemManagerType });
+                        if (objects != null && objects.Length > 0)
+                        {
+                            collectableItemManagerInstance = objects[0];
+                        }
+                    }
+                }
+
+                if (collectableItemManagerInstance == null)
+                {
+                    logger.Log("Could not find CollectableItemManager instance using any method");
+                    return null;
+                }
+
+                // Get the masterList field
+                FieldInfo masterListField = collectableItemManagerType.GetField("masterList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                
+                if (masterListField != null)
+                {
+                    object masterList = masterListField.GetValue(collectableItemManagerInstance);
+                    
+                    if (masterList != null)
+                    {
+                        // masterList should be a List<CollectableItem> or similar collection
+                        return masterList as System.Collections.IEnumerable;
+                    }
+                }
+
+                logger.Log("Failed to access CollectableItemManager.masterList");
+                return null;
+            }
+            catch (Exception e)
+            {
+                logger.Log($"Error getting masterList from CollectableItemManager: {e.Message}");
+                logger.Log($"Stack trace: {e.StackTrace}");
+                return null;
+            }
         }
 
         /// <summary>

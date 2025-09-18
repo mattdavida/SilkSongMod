@@ -20,6 +20,8 @@ namespace SilkSong.Services
         private bool invincibilityEnabled = false;
         private bool gameSpeedEnabled = false;
         private bool oneHitKillEnabled = false;
+        private bool infiniteToolUseEnabled = false;
+        private bool quickAttacksEnabled = false;
         
         // Game speed control
         private float currentGameSpeed = 2.0f;
@@ -52,6 +54,16 @@ namespace SilkSong.Services
         /// Gets whether one-hit kill is currently enabled.
         /// </summary>
         public bool IsOneHitKillEnabled => oneHitKillEnabled;
+
+        /// <summary>
+        /// Gets whether infinite tool use is currently enabled.
+        /// </summary>
+        public bool IsInfiniteToolUseEnabled => infiniteToolUseEnabled;
+
+        /// <summary>
+        /// Gets whether quick attacks are currently enabled.
+        /// </summary>
+        public bool IsQuickAttacksEnabled => quickAttacksEnabled;
 
         /// <summary>
         /// Gets the current game speed multiplier.
@@ -286,6 +298,191 @@ namespace SilkSong.Services
         }
 
         /// <summary>
+        /// Toggles infinite tool use on/off.
+        /// </summary>
+        /// <param name="onSuccess">Callback for success message</param>
+        /// <param name="onError">Callback for error message</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ToggleInfiniteToolUse(Action<string> onSuccess = null, Action<string> onError = null)
+        {
+            try
+            {
+                infiniteToolUseEnabled = !infiniteToolUseEnabled;
+
+                // Find ToolItemManager and set the IsInfiniteToolUseEnabled property
+                Type toolItemManagerType = FindTypeInAssemblies("ToolItemManager");
+                if (toolItemManagerType == null)
+                {
+                    onError?.Invoke("ToolItemManager not found");
+                    logger.Log("ToolItemManager type not found for infinite tool use toggle");
+                    infiniteToolUseEnabled = !infiniteToolUseEnabled; // Revert
+                    return false;
+                }
+
+                // Try to find the static property
+                PropertyInfo infiniteToolUseProperty = toolItemManagerType.GetProperty("IsInfiniteToolUseEnabled", BindingFlags.Public | BindingFlags.Static);
+                if (infiniteToolUseProperty != null && infiniteToolUseProperty.CanWrite)
+                {
+                    infiniteToolUseProperty.SetValue(null, infiniteToolUseEnabled);
+                    
+                    string status = infiniteToolUseEnabled ? "enabled" : "disabled";
+                    onSuccess?.Invoke($"Infinite Tool Use {status}");
+                    logger.Log($"Infinite Tool Use {status}");
+                    return true;
+                }
+                else
+                {
+                    onError?.Invoke("IsInfiniteToolUseEnabled property not found or not writable");
+                    logger.Log("IsInfiniteToolUseEnabled property not found or not writable on ToolItemManager");
+                    infiniteToolUseEnabled = !infiniteToolUseEnabled; // Revert
+                    return false;
+                }
+            }
+            catch (Exception e)
+            {
+                // Revert the toggle if error occurred
+                infiniteToolUseEnabled = !infiniteToolUseEnabled;
+                onError?.Invoke($"Error toggling Infinite Tool Use: {e.Message}");
+                logger.Log($"Error in ToggleInfiniteToolUse: {e.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Toggles quick attacks on/off by modifying all HeroControllerConfig instances.
+        /// </summary>
+        /// <param name="onSuccess">Callback for success message</param>
+        /// <param name="onError">Callback for error message</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ToggleQuickAttacks(Action<string> onSuccess = null, Action<string> onError = null)
+        {
+            try
+            {
+                quickAttacksEnabled = !quickAttacksEnabled;
+
+                // Find HeroControllerConfig type
+                Type heroControllerConfigType = FindTypeInAssemblies("HeroControllerConfig");
+                if (heroControllerConfigType == null)
+                {
+                    onError?.Invoke("HeroControllerConfig not found");
+                    logger.Log("HeroControllerConfig type not found for quick attacks toggle");
+                    quickAttacksEnabled = !quickAttacksEnabled; // Revert
+                    return false;
+                }
+
+                // Find all instances of HeroControllerConfig
+                UnityEngine.Object[] allConfigs = UnityEngine.Resources.FindObjectsOfTypeAll(heroControllerConfigType);
+                if (allConfigs == null || allConfigs.Length == 0)
+                {
+                    onError?.Invoke("No HeroControllerConfig instances found");
+                    logger.Log("No HeroControllerConfig instances found in scene");
+                    quickAttacksEnabled = !quickAttacksEnabled; // Revert
+                    return false;
+                }
+
+                int modifiedCount = 0;
+                foreach (var config in allConfigs)
+                {
+                    try
+                    {
+                        if (quickAttacksEnabled)
+                        {
+                            // Enable quick attacks - base properties
+                            SetConfigProperty(config, "canTurnWhileSlashing", true);
+                            SetConfigProperty(config, "attackCooldownTime", 0.01f);
+                            SetConfigProperty(config, "attackDuration", 0.01f);
+                            SetConfigProperty(config, "attackRecoveryTime", 0.01f);
+                            SetConfigProperty(config, "quickAttackCooldownTime", 0.01f);
+                            SetConfigProperty(config, "quickAttackSpeedMult", 99f);
+                            
+                            // Warrior-specific properties (if they exist)
+                            SetConfigProperty(config, "rageAttackCooldownTime", 0.01f);
+                            SetConfigProperty(config, "rageAttackDuration", 0.01f);
+                            SetConfigProperty(config, "rageQuickAttackCooldownTime", 0.001f);
+                        }
+                        else
+                        {
+                            // Restore default values (approximate defaults) - base properties
+                            SetConfigProperty(config, "canTurnWhileSlashing", false);
+                            SetConfigProperty(config, "attackCooldownTime", 0.3f);
+                            SetConfigProperty(config, "attackDuration", 0.3f);
+                            SetConfigProperty(config, "attackRecoveryTime", 0.2f);
+                            SetConfigProperty(config, "quickAttackCooldownTime", 0.15f);
+                            SetConfigProperty(config, "quickAttackSpeedMult", 1f);
+                            
+                            // Warrior-specific properties (if they exist) - restore defaults
+                            SetConfigProperty(config, "rageAttackCooldownTime", 0.32f);
+                            SetConfigProperty(config, "rageAttackDuration", 0.3f);
+                            SetConfigProperty(config, "rageQuickAttackCooldownTime", 0.195f);
+                        }
+                        modifiedCount++;
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Log($"Error modifying HeroControllerConfig {config.name}: {e.Message}");
+                    }
+                }
+
+                string status = quickAttacksEnabled ? "enabled" : "disabled";
+                onSuccess?.Invoke($"Quick Attacks {status} ({modifiedCount} configs modified)");
+                logger.Log($"Quick Attacks {status} - modified {modifiedCount} HeroControllerConfig instances");
+                return true;
+            }
+            catch (Exception e)
+            {
+                // Revert the toggle if error occurred
+                quickAttacksEnabled = !quickAttacksEnabled;
+                onError?.Invoke($"Error toggling Quick Attacks: {e.Message}");
+                logger.Log($"Error in ToggleQuickAttacks: {e.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Helper method to set a property on a HeroControllerConfig instance using reflection.
+        /// Handles inheritance by searching up the type hierarchy.
+        /// </summary>
+        private void SetConfigProperty(object config, string propertyName, object value)
+        {
+            Type configType = config.GetType();
+            string configName = ((UnityEngine.Object)config).name;
+            
+            // Search for field in the entire inheritance hierarchy
+            FieldInfo field = null;
+            Type currentType = configType;
+            while (currentType != null && field == null)
+            {
+                field = currentType.GetField(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                currentType = currentType.BaseType;
+            }
+            
+            if (field != null)
+            {
+                field.SetValue(config, value);
+                logger.Log($"Set {propertyName} = {value} on {configName} (found in {field.DeclaringType.Name})");
+                return;
+            }
+            
+            // Search for property in the entire inheritance hierarchy
+            PropertyInfo property = null;
+            currentType = configType;
+            while (currentType != null && property == null)
+            {
+                property = currentType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                currentType = currentType.BaseType;
+            }
+            
+            if (property != null && property.CanWrite)
+            {
+                property.SetValue(config, value);
+                logger.Log($"Set {propertyName} = {value} on {configName} (found in {property.DeclaringType.Name})");
+                return;
+            }
+            
+            logger.Log($"Property/Field {propertyName} not found or not writable on {configName} (type: {configType.Name})");
+        }
+
+        /// <summary>
         /// Updates the game speed text and applies it if valid.
         /// </summary>
         /// <param name="speedText">Speed text to parse</param>
@@ -390,6 +587,7 @@ namespace SilkSong.Services
                     if (behaviour == null) continue;
 
                     Type type = behaviour.GetType();
+                    
                     string typeName = type.Name.ToLower();
 
                     // Only target DamageEnemies components
@@ -400,6 +598,7 @@ namespace SilkSong.Services
                         foreach (FieldInfo field in fields)
                         {
                             string fieldName = field.Name.ToLower();
+
 
                             // Look for damage-related fields
                             if ((fieldName.Contains("damage") || fieldName.Contains("multiplier"))

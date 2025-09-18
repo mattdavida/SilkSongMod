@@ -76,22 +76,18 @@ namespace SilkSong.Services
                 if (behaviour == null) continue;
 
                 Type type = behaviour.GetType();
-                string typeName = type.Name.ToLower();
+                string typeName = type.Name;
 
-                // Focus on DamageEnemies and similar combat components
-                if (typeName.Contains("damage") || typeName.Contains("attack") || typeName.Contains("combat") ||
-                    typeName.Contains("enemy") || typeName.Contains("weapon") || typeName.Contains("projectile"))
+                // Target only DamageEnemies component specifically
+                if (typeName.Equals("DamageEnemies", StringComparison.OrdinalIgnoreCase))
                 {
                     FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
                     foreach (FieldInfo field in fields)
                     {
-                        string fieldName = field.Name.ToLower();
-
-                        // Look for damage-related fields
-                        if ((fieldName.Contains("damage") || fieldName.Contains("multiplier") || fieldName.Contains("power") ||
-                             fieldName.Contains("strength") || fieldName.Contains("force"))
-                            && (field.FieldType == typeof(float) || field.FieldType == typeof(int)))
+                        // Target only the damageMultiplier field specifically
+                        if (field.Name.Equals("damageMultiplier", StringComparison.OrdinalIgnoreCase) && 
+                            field.FieldType == typeof(float))
                         {
                             try
                             {
@@ -134,6 +130,12 @@ namespace SilkSong.Services
                 return false;
             }
 
+            // If multiplier is 1.0, reset to original values instead of multiplying
+            if (Math.Abs(multiplier - 1.0f) < 0.01f)
+            {
+                return ResetToOriginalValues(onSuccess, onError);
+            }
+
             int modifiedCount = 0;
             HashSet<string> uniqueFields = new HashSet<string>();
 
@@ -172,6 +174,38 @@ namespace SilkSong.Services
             }
 
             onSuccess?.Invoke($"Applied {multiplier}x to {uniqueFields.Count} unique fields ({modifiedCount} total)");
+            return true;
+        }
+
+        /// <summary>
+        /// Resets all damage fields to their original values (1.0x multiplier)
+        /// </summary>
+        public bool ResetToOriginalValues(System.Action<string> onSuccess, System.Action<string> onError)
+        {
+            int resetCount = 0;
+            HashSet<string> uniqueFields = new HashSet<string>();
+
+            for (int i = 0; i < damageFields.Count; i++)
+            {
+                FieldInfo field = damageFields[i];
+                MonoBehaviour behaviour = damageBehaviours[i];
+
+                if (behaviour == null || !originalValues.ContainsKey(field)) continue;
+
+                try
+                {
+                    object originalValue = originalValues[field];
+                    field.SetValue(behaviour, originalValue);
+                    resetCount++;
+                    uniqueFields.Add(field.Name);
+                }
+                catch (Exception)
+                {
+                    // Skip read-only fields
+                }
+            }
+
+            onSuccess?.Invoke($"Reset {uniqueFields.Count} unique fields to original values ({resetCount} total)");
             return true;
         }
 
